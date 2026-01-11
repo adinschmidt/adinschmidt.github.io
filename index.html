@@ -90,14 +90,17 @@
             right: 0;
             z-index: 100;
             padding: 20px 0;
-            background: rgba(10, 10, 11, 0.8);
+            background: rgba(10, 10, 11, 0.95);
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid transparent;
-            transition: border-color 0.3s ease;
+            border-bottom: 1px solid var(--border);
+            transform: translateY(-100%);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
 
-        nav.scrolled {
-            border-bottom-color: var(--border);
+        nav.visible {
+            transform: translateY(0);
+            opacity: 1;
         }
 
         nav .container {
@@ -157,9 +160,13 @@
         .hero {
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            padding: 120px 0 80px;
+            align-items: flex-start;
+            padding: 15vh 0 80px;
             position: relative;
+        }
+
+        .hero .container {
+            padding-left: 0;
         }
 
         .hero-content {
@@ -197,11 +204,29 @@
             animation-delay: 0.2s;
         }
 
-        .hero h1 .gradient {
+        .hero h1 .name {
             background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+
+        .hero-tagline {
+            font-size: clamp(24px, 4vw, 36px);
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+            animation-delay: 0.25s;
+        }
+
+        .hero-tagline .gradient {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
         }
 
         .hero-desc {
@@ -260,9 +285,10 @@
             color: var(--accent);
         }
 
-        .btn svg {
+        .btn .btn-icon {
             width: 16px;
             height: 16px;
+            flex-shrink: 0;
         }
 
         /* Floating elements */
@@ -276,6 +302,7 @@
             opacity: 0;
             animation: fadeIn 1s ease forwards;
             animation-delay: 0.5s;
+            pointer-events: none;
         }
 
         .float-circle {
@@ -385,7 +412,7 @@
             overflow: hidden;
             position: relative;
             aspect-ratio: 8.5/11;
-            max-height: 700px;
+            max-height: 900px;
         }
 
         .resume-frame iframe {
@@ -596,7 +623,7 @@
             }
 
             .resume-frame {
-                max-height: 500px;
+                max-height: 650px;
             }
 
             .projects-grid {
@@ -659,20 +686,36 @@
         <div class="container">
             <div class="hero-content">
                 <div class="hero-label">Software Developer</div>
-                <h1>Building tools<br>that <span class="gradient">solve problems</span></h1>
+                <h1><span class="name">Adin Schmidt</span></h1>
+                <p class="hero-tagline">Building tools that <span class="gradient">solve problems</span></p>
                 <p class="hero-desc">
                     I create developer tools, CLI utilities, and browser extensions
                     that make workflows more efficient and data more accessible.
                 </p>
                 <div class="hero-actions">
                     <a href="#projects" class="btn btn-primary">
-                        View Projects
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
                         </svg>
+                        <span>Projects</span>
                     </a>
                     <a href="#resume" class="btn btn-secondary">
-                        View Resume
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        <span>Resume</span>
+                    </a>
+                    <a href="https://github.com/adinschmidt" target="_blank" class="btn btn-secondary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                        </svg>
+                        <span>GitHub</span>
                     </a>
                 </div>
             </div>
@@ -702,9 +745,7 @@
                             </svg>
                         </div>
                         <a href="https://github.com/adinschmidt/AI-translator" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                         </a>
                     </div>
                     <h3><a href="https://github.com/adinschmidt/AI-translator" target="_blank">AI Translator</a></h3>
@@ -730,9 +771,7 @@
                             </svg>
                         </div>
                         <a href="https://github.com/adinschmidt/recall" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                         </a>
                     </div>
                     <h3><a href="https://github.com/adinschmidt/recall" target="_blank">Recall</a></h3>
@@ -757,9 +796,7 @@
                             </svg>
                         </div>
                         <a href="https://github.com/adinschmidt/spc-converter" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                         </a>
                     </div>
                     <h3><a href="https://github.com/adinschmidt/spc-converter" target="_blank">SPC Converter</a></h3>
@@ -784,9 +821,7 @@
                             </svg>
                         </div>
                         <a href="https://github.com/adinschmidt/MultiFormatConverter" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                         </a>
                     </div>
                     <h3><a href="https://github.com/adinschmidt/MultiFormatConverter" target="_blank">MultiFormatConverter</a></h3>
@@ -816,10 +851,12 @@
                         skills, and background.
                     </p>
                     <a href="https://resume-indol-beta.vercel.app/" target="_blank" class="btn btn-primary">
-                        Open Full Resume
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
                         </svg>
+                        <span>Open Full Resume</span>
                     </a>
                 </div>
                 <div class="resume-frame fade-in">
@@ -838,13 +875,11 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-text">
-                    &copy; 2025 Adin Schmidt
+                    &copy; 2026 Adin Schmidt
                 </div>
                 <div class="footer-links">
                     <a href="https://github.com/adinschmidt" target="_blank" aria-label="GitHub">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                     </a>
                 </div>
             </div>
@@ -875,13 +910,15 @@
 
         document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
-        // Nav scroll effect
+        // Nav scroll effect - only show after scrolling past hero
         const nav = document.querySelector('nav');
+        const hero = document.querySelector('.hero');
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                nav.classList.add('scrolled');
+            const heroBottom = hero.offsetTop + hero.offsetHeight * 0.5;
+            if (window.scrollY > heroBottom) {
+                nav.classList.add('visible');
             } else {
-                nav.classList.remove('scrolled');
+                nav.classList.remove('visible');
             }
         });
 
