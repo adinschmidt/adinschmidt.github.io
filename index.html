@@ -1043,21 +1043,7 @@
             
             camera.position.z = 15;
 
-            // Mouse movement for parallax
-            let mouseX = 0;
-            let mouseY = 0;
-            let targetX = 0;
-            let targetY = 0;
-
-            const windowHalfX = window.innerWidth / 2;
-            const windowHalfY = window.innerHeight / 2;
-
-            document.addEventListener('mousemove', (event) => {
-                mouseX = (event.clientX - windowHalfX) / 100;
-                mouseY = (event.clientY - windowHalfY) / 100;
-            });
-
-            // Animation loop
+            // Animation loop - no mouse interaction
             const clock = new THREE.Clock();
 
             function animate() {
@@ -1065,19 +1051,11 @@
 
                 const elapsedTime = clock.getElapsedTime();
 
-                // Animate particles
+                // Animate particles with slow rotation
                 particlesMesh.rotation.y = elapsedTime * 0.02;
                 particlesMesh.rotation.x = elapsedTime * 0.01;
                 particlesMesh2.rotation.y = -elapsedTime * 0.015;
                 particlesMesh2.rotation.x = -elapsedTime * 0.008;
-
-                // Parallax effect
-                targetX = mouseX * 0.5;
-                targetY = mouseY * 0.5;
-
-                camera.position.x += (targetX - camera.position.x) * 0.05;
-                camera.position.y += (-targetY - camera.position.y) * 0.05;
-                camera.lookAt(scene.position);
 
                 renderer.render(scene, camera);
             }
