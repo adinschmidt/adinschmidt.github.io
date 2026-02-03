@@ -1004,16 +1004,16 @@
             
             // First particle system (cyan)
             const particlesGeometry = new THREE.BufferGeometry();
-            const particlesCount = 120;
-            const posArray = generatePositions(particlesCount, 35, 8);
+            const particlesCount = 150;
+            const posArray = generatePositions(particlesCount, 60, 18);
 
             particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
             const particlesMaterial = new THREE.PointsMaterial({
-                size: 0.08,
+                size: 0.12,
                 color: '#00f0ff',
                 transparent: true,
-                opacity: 0.5,
+                opacity: 0.6,
                 map: starTexture,
                 alphaTest: 0.001,
                 sizeAttenuation: true,
@@ -1024,15 +1024,15 @@
 
             // Second particle system (purple)
             const particlesGeometry2 = new THREE.BufferGeometry();
-            const posArray2 = generatePositions(particlesCount, 30, 6);
+            const posArray2 = generatePositions(particlesCount, 50, 15);
 
             particlesGeometry2.setAttribute('position', new THREE.BufferAttribute(posArray2, 3));
 
             const particlesMaterial2 = new THREE.PointsMaterial({
-                size: 0.06,
+                size: 0.08,
                 color: '#7000ff',
                 transparent: true,
-                opacity: 0.4,
+                opacity: 0.5,
                 map: starTexture,
                 alphaTest: 0.001,
                 sizeAttenuation: true,
