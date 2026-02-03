@@ -74,22 +74,6 @@
             pointer-events: none;
         }
 
-        /* Grid background */
-        .grid-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 60px 60px;
-            opacity: 0.15;
-            pointer-events: none;
-            z-index: 0;
-        }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -679,7 +663,6 @@
 </head>
 <body>
     <canvas id="star-canvas"></canvas>
-    <div class="grid-bg"></div>
 
     <!-- Navigation -->
     <nav>
@@ -951,6 +934,9 @@
         (function() {
             // Check if mobile/touch device - skip stars for performance
             if (window.matchMedia('(pointer: coarse)').matches) return;
+
+            const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            let prefersReducedMotion = reducedMotionQuery.matches;
             
             const canvas = document.getElementById('star-canvas');
             const scene = new THREE.Scene();
@@ -1043,24 +1029,93 @@
             
             camera.position.z = 15;
 
-            // Animation loop - no mouse interaction
-            const clock = new THREE.Clock();
+            const frameInterval = 1000 / 30;
+            let animationFrameId = null;
+            let isAnimating = false;
+            let lastFrameTime = 0;
+            let previousRenderTime = 0;
+            let elapsedTime = 0;
 
-            function animate() {
-                requestAnimationFrame(animate);
+            function renderScene(now) {
+                if (previousRenderTime === 0) {
+                    previousRenderTime = now;
+                }
 
-                const elapsedTime = clock.getElapsedTime();
+                const deltaSeconds = (now - previousRenderTime) / 1000;
+                previousRenderTime = now;
 
-                // Animate particles with slow rotation
-                particlesMesh.rotation.y = elapsedTime * 0.02;
-                particlesMesh.rotation.x = elapsedTime * 0.01;
-                particlesMesh2.rotation.y = -elapsedTime * 0.015;
-                particlesMesh2.rotation.x = -elapsedTime * 0.008;
+                if (!prefersReducedMotion) {
+                    elapsedTime += deltaSeconds;
+
+                    // Animate particles with slow rotation
+                    particlesMesh.rotation.y = elapsedTime * 0.02;
+                    particlesMesh.rotation.x = elapsedTime * 0.01;
+                    particlesMesh2.rotation.y = -elapsedTime * 0.015;
+                    particlesMesh2.rotation.x = -elapsedTime * 0.008;
+                }
 
                 renderer.render(scene, camera);
             }
-            
-            animate();
+
+            function animate(now) {
+                if (!isAnimating) return;
+
+                if (lastFrameTime === 0 || now - lastFrameTime >= frameInterval) {
+                    lastFrameTime = now;
+                    renderScene(now);
+                }
+
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            function stopAnimation() {
+                if (!isAnimating) return;
+                isAnimating = false;
+                if (animationFrameId !== null) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+            }
+
+            function startAnimation() {
+                if (isAnimating || prefersReducedMotion || document.hidden) return;
+                isAnimating = true;
+                lastFrameTime = 0;
+                previousRenderTime = 0;
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            function handleReducedMotionChange(event) {
+                prefersReducedMotion = event.matches;
+
+                if (prefersReducedMotion) {
+                    stopAnimation();
+                    previousRenderTime = 0;
+                    renderScene(performance.now());
+                } else {
+                    startAnimation();
+                }
+            }
+
+            if (prefersReducedMotion) {
+                renderScene(performance.now());
+            } else {
+                startAnimation();
+            }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    stopAnimation();
+                } else if (!prefersReducedMotion) {
+                    startAnimation();
+                }
+            });
+
+            if (typeof reducedMotionQuery.addEventListener === 'function') {
+                reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+            } else if (typeof reducedMotionQuery.addListener === 'function') {
+                reducedMotionQuery.addListener(handleReducedMotionChange);
+            }
             
             // Handle resize
             window.addEventListener('resize', () => {
