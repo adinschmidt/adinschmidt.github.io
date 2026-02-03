@@ -1134,18 +1134,22 @@
             rootMargin: '0px 0px -50px 0px'
         };
 
+        let projectCardsRevealed = false;
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach((entry, index) => {
-                if (entry.isIntersecting) {
-                    // Add staggered delay for cards
-                    const delay = entry.target.closest('.projects-grid')
-                        ? Array.from(entry.target.parentElement.children).indexOf(entry.target) * 100
-                        : 0;
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
 
-                    setTimeout(() => {
-                        entry.target.classList.add('visible');
-                    }, delay);
+                if (entry.target.closest('.projects-grid') && !projectCardsRevealed) {
+                    projectCardsRevealed = true;
+                    document.querySelectorAll('.projects-grid .project-card.fade-in').forEach((card) => {
+                        card.classList.add('visible');
+                        observer.unobserve(card);
+                    });
+                    return;
                 }
+
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
             });
         }, observerOptions);
 
