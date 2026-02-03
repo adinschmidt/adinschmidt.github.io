@@ -961,22 +961,62 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setClearColor(0x000000, 0);
             
+            // Create circular texture for soft round stars
+            function createStarTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                
+                const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 32, 32);
+                
+                return new THREE.CanvasTexture(canvas);
+            }
+            
+            const starTexture = createStarTexture();
+            
+            // Helper function to generate positions with minimum distance from camera
+            function generatePositions(count, spread, minDistance) {
+                const positions = new Float32Array(count * 3);
+                for (let i = 0; i < count; i++) {
+                    let x, y, z, distance;
+                    let attempts = 0;
+                    do {
+                        x = (Math.random() - 0.5) * spread;
+                        y = (Math.random() - 0.5) * spread;
+                        z = (Math.random() - 0.5) * spread;
+                        distance = Math.sqrt(x*x + y*y + z*z);
+                        attempts++;
+                    } while (distance < minDistance && attempts < 100);
+                    
+                    positions[i * 3] = x;
+                    positions[i * 3 + 1] = y;
+                    positions[i * 3 + 2] = z;
+                }
+                return positions;
+            }
+            
             // First particle system (cyan)
             const particlesGeometry = new THREE.BufferGeometry();
-            const particlesCount = 150;
-            const posArray = new Float32Array(particlesCount * 3);
-
-            for (let i = 0; i < particlesCount * 3; i++) {
-                posArray[i] = (Math.random() - 0.5) * 30;
-            }
+            const particlesCount = 120;
+            const posArray = generatePositions(particlesCount, 35, 8);
 
             particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
             const particlesMaterial = new THREE.PointsMaterial({
-                size: 0.05,
+                size: 0.08,
                 color: '#00f0ff',
                 transparent: true,
-                opacity: 0.6,
+                opacity: 0.5,
+                map: starTexture,
+                alphaTest: 0.001,
+                sizeAttenuation: true,
             });
 
             const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
@@ -984,19 +1024,18 @@
 
             // Second particle system (purple)
             const particlesGeometry2 = new THREE.BufferGeometry();
-            const posArray2 = new Float32Array(particlesCount * 3);
-
-            for (let i = 0; i < particlesCount * 3; i++) {
-                posArray2[i] = (Math.random() - 0.5) * 25;
-            }
+            const posArray2 = generatePositions(particlesCount, 30, 6);
 
             particlesGeometry2.setAttribute('position', new THREE.BufferAttribute(posArray2, 3));
 
             const particlesMaterial2 = new THREE.PointsMaterial({
-                size: 0.04,
+                size: 0.06,
                 color: '#7000ff',
                 transparent: true,
-                opacity: 0.5,
+                opacity: 0.4,
+                map: starTexture,
+                alphaTest: 0.001,
+                sizeAttenuation: true,
             });
 
             const particlesMesh2 = new THREE.Points(particlesGeometry2, particlesMaterial2);
