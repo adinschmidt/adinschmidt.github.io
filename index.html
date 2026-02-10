@@ -950,84 +950,89 @@
             // Create circular texture for soft round stars
             function createStarTexture() {
                 const canvas = document.createElement('canvas');
-                canvas.width = 32;
-                canvas.height = 32;
+                canvas.width = 64;
+                canvas.height = 64;
                 const ctx = canvas.getContext('2d');
-                
-                const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+
+                // Tight bright core with wide soft glow
+                const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
                 gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(0.08, 'rgba(255, 255, 255, 0.95)');
+                gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.5)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
                 gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                
+
                 ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 32, 32);
-                
+                ctx.fillRect(0, 0, 64, 64);
+
                 return new THREE.CanvasTexture(canvas);
             }
-            
+
             const starTexture = createStarTexture();
             
-            // Helper function to generate positions with minimum distance from camera
-            function generatePositions(count, spread, minDistance) {
+            // Generate star positions spread in X/Y, distributed along Z depth
+            // Stars span from zFar (behind) to zNear (in front of camera)
+            const zNear = -5;   // stars recycle before reaching camera
+            const zFar = -120;  // far end of the tunnel
+            function generatePositions(count, spreadXY) {
                 const positions = new Float32Array(count * 3);
                 for (let i = 0; i < count; i++) {
-                    let x, y, z, distance;
-                    let attempts = 0;
-                    do {
-                        x = (Math.random() - 0.5) * spread;
-                        y = (Math.random() - 0.5) * spread;
-                        z = (Math.random() - 0.5) * spread;
-                        distance = Math.sqrt(x*x + y*y + z*z);
-                        attempts++;
-                    } while (distance < minDistance && attempts < 100);
-                    
-                    positions[i * 3] = x;
-                    positions[i * 3 + 1] = y;
-                    positions[i * 3 + 2] = z;
+                    positions[i * 3]     = (Math.random() - 0.5) * spreadXY;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * spreadXY;
+                    positions[i * 3 + 2] = zFar + Math.random() * (zNear - zFar);
                 }
                 return positions;
             }
             
-            // First particle system (cyan)
-            const particlesGeometry = new THREE.BufferGeometry();
-            const particlesCount = 150;
-            const posArray = generatePositions(particlesCount, 60, 18);
+            // Resolution-independent scaling
+            // Reference: 1080p screen. Sizes and counts scale so stars
+            // look the same on 720p, 1080p, 1440p, and 4K displays.
+            const refHeight = 1080;
+            const screenH = window.innerHeight * window.devicePixelRatio;
+            const sizeScale = screenH / refHeight;
+            const countScale = (window.innerWidth * window.innerHeight) / (1920 * 1080);
 
-            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            // Star layers — realistic blackbody star colors
+            // Blue-white (hot) → pure white → yellow-white → warm amber (cool)
+            // speed: Z units per second each star moves towards camera
+            // Sizes are authored for 1080p and scaled up for higher resolutions
+            const starLayers = [
+                // --- Slow background (distant, dim) ---
+                { count: 90, size: 0.14, color: '#e8e8f0', opacity: 0.25, spreadXY: 80, speed: 0.17 },
+                { count: 50, size: 0.14, color: '#ffe0b8', opacity: 0.2, spreadXY: 80, speed: 0.20 },
+                // --- Mid layer ---
+                { count: 30, size: 0.26, color: '#d4dfff', opacity: 0.45, spreadXY: 65, speed: 0.42 },
+                { count: 60, size: 0.22, color: '#f0f0ff', opacity: 0.5, spreadXY: 65, speed: 0.47 },
+                { count: 40, size: 0.20, color: '#ffe8c8', opacity: 0.4, spreadXY: 60, speed: 0.50 },
+                // --- Fast foreground (brighter, closer) ---
+                { count: 12, size: 0.45, color: '#cad8ff', opacity: 0.7, spreadXY: 50, speed: 0.83 },
+                { count: 25, size: 0.34, color: '#fff4e8', opacity: 0.6, spreadXY: 50, speed: 0.92 },
+                { count: 15, size: 0.28, color: '#ffd9a0', opacity: 0.4, spreadXY: 45, speed: 0.75 },
+            ];
 
-            const particlesMaterial = new THREE.PointsMaterial({
-                size: 0.12,
-                color: '#00f0ff',
-                transparent: true,
-                opacity: 0.6,
-                map: starTexture,
-                alphaTest: 0.001,
-                sizeAttenuation: true,
+            const allMeshes = [];
+            starLayers.forEach((layer) => {
+                const scaledCount = Math.round(layer.count * Math.max(countScale, 1));
+                const geo = new THREE.BufferGeometry();
+                const pos = generatePositions(scaledCount, layer.spreadXY);
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                const mat = new THREE.PointsMaterial({
+                    size: layer.size * sizeScale,
+                    color: layer.color,
+                    transparent: true,
+                    opacity: layer.opacity,
+                    map: starTexture,
+                    alphaTest: 0.001,
+                    sizeAttenuation: true,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending,
+                });
+                const mesh = new THREE.Points(geo, mat);
+                scene.add(mesh);
+                allMeshes.push({ mesh, mat, geo, baseOpacity: layer.opacity, baseSize: layer.size, speed: layer.speed, spreadXY: layer.spreadXY });
             });
-
-            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-            scene.add(particlesMesh);
-
-            // Second particle system (purple)
-            const particlesGeometry2 = new THREE.BufferGeometry();
-            const posArray2 = generatePositions(particlesCount, 50, 15);
-
-            particlesGeometry2.setAttribute('position', new THREE.BufferAttribute(posArray2, 3));
-
-            const particlesMaterial2 = new THREE.PointsMaterial({
-                size: 0.08,
-                color: '#7000ff',
-                transparent: true,
-                opacity: 0.5,
-                map: starTexture,
-                alphaTest: 0.001,
-                sizeAttenuation: true,
-            });
-
-            const particlesMesh2 = new THREE.Points(particlesGeometry2, particlesMaterial2);
-            scene.add(particlesMesh2);
             
-            camera.position.z = 15;
+            camera.position.z = 0;
 
             const frameInterval = 1000 / 30;
             let animationFrameId = null;
@@ -1047,11 +1052,28 @@
                 if (!prefersReducedMotion) {
                     elapsedTime += deltaSeconds;
 
-                    // Animate particles with slow rotation
-                    particlesMesh.rotation.y = elapsedTime * 0.02;
-                    particlesMesh.rotation.x = elapsedTime * 0.01;
-                    particlesMesh2.rotation.y = -elapsedTime * 0.015;
-                    particlesMesh2.rotation.x = -elapsedTime * 0.008;
+                    // Move each star towards camera along Z, recycle when past
+                    allMeshes.forEach((entry) => {
+                        const posAttr = entry.geo.attributes.position;
+                        const arr = posAttr.array;
+                        const dz = entry.speed * deltaSeconds;
+                        for (let i = 0; i < posAttr.count; i++) {
+                            arr[i * 3 + 2] += dz;
+                            // When a star passes the camera, send it back to the far end
+                            if (arr[i * 3 + 2] > zNear) {
+                                arr[i * 3]     = (Math.random() - 0.5) * entry.spreadXY;
+                                arr[i * 3 + 1] = (Math.random() - 0.5) * entry.spreadXY;
+                                arr[i * 3 + 2] = zFar + Math.random() * 10;
+                            }
+                        }
+                        posAttr.needsUpdate = true;
+                    });
+
+                    // Gentle twinkling — slow, subtle opacity flutter
+                    allMeshes.forEach((entry, i) => {
+                        const twinkle = Math.sin(elapsedTime * (0.3 + i * 0.07) + i * 2.3) * 0.04;
+                        entry.mat.opacity = entry.baseOpacity + twinkle;
+                    });
                 }
 
                 renderer.render(scene, camera);
@@ -1117,11 +1139,16 @@
                 reducedMotionQuery.addListener(handleReducedMotionChange);
             }
             
-            // Handle resize
+            // Handle resize — rescale star sizes to match new resolution
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                const newScale = (window.innerHeight * window.devicePixelRatio) / refHeight;
+                allMeshes.forEach((entry) => {
+                    entry.mat.size = entry.baseSize * newScale;
+                });
             });
             
         })();
