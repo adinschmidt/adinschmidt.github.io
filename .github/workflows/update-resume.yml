@@ -1,0 +1,44 @@
+name: Update resume PDF
+
+on:
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-resume-pdf
+  cancel-in-progress: false
+
+jobs:
+  update-resume:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download current resume
+        run: |
+          curl --location --fail --show-error \
+            --output /tmp/resume.pdf \
+            "https://resume.adinschmidt.com/"
+
+          test "$(head -c 5 /tmp/resume.pdf)" = "%PDF-"
+
+      - name: Update checked-in resume
+        run: |
+          if cmp --silent /tmp/resume.pdf assets/resume.pdf; then
+            echo "Resume PDF is already current."
+            exit 0
+          fi
+
+          mv /tmp/resume.pdf assets/resume.pdf
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/resume.pdf
+          git commit -m "Update resume PDF"
+          git push
