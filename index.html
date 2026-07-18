@@ -1061,11 +1061,30 @@
                     shader.uniforms.uTime = timeUniform;
                     shader.uniforms.uSpeed = { value: layer.speed };
                     shader.vertexShader = shader.vertexShader
-                        .replace('void main() {', 'uniform float uTime;\nuniform float uSpeed;\nvoid main() {')
+                        .replace('void main() {', 'uniform float uTime;\nuniform float uSpeed;\nvarying float vFade;\nvoid main() {')
                         .replace(
                             '#include <begin_vertex>',
                             '#include <begin_vertex>\n' +
                             'transformed.z = ' + zFar.toFixed(1) + ' + mod( transformed.z - (' + zFar.toFixed(1) + ') + uSpeed * uTime, ' + zRange + ' );'
+                        )
+                        .replace(
+                            '#include <project_vertex>',
+                            '#include <project_vertex>\n' +
+                            // Stars recycle at zNear while still inside the
+                            // frustum, and point sprites are culled the moment
+                            // their center leaves the screen — both read as
+                            // stars popping out of existence. Fade over the
+                            // last few units of depth and in a thin border
+                            // band so every exit is gradual instead.
+                            'vFade = smoothstep( ' + (-zNear).toFixed(1) + ', ' + (-zNear + 5).toFixed(1) + ', -transformed.z );\n' +
+                            'vec2 edgeNdc = abs( gl_Position.xy / gl_Position.w );\n' +
+                            'vFade *= 1.0 - smoothstep( 0.92, 1.0, max( edgeNdc.x, edgeNdc.y ) );'
+                        );
+                    shader.fragmentShader = shader.fragmentShader
+                        .replace('void main() {', 'varying float vFade;\nvoid main() {')
+                        .replace(
+                            'vec4 diffuseColor = vec4( diffuse, opacity );',
+                            'vec4 diffuseColor = vec4( diffuse, opacity * vFade );'
                         );
                 };
                 const mesh = new THREE.Points(geo, mat);
