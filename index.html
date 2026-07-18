@@ -1287,11 +1287,14 @@
             let uid = 0;
             const filterCache = new Map();
 
-            // Same-sized elements (all six project cards) share one filter
-            function getFilterId(w, h, radius) {
+            // Same-sized elements (all six project cards) share one filter.
+            // Entries persist across rebuilds so elements keep referencing an
+            // already-decoded feImage — swapping in a fresh filter would show
+            // the rim shifted for a moment while the new map decodes.
+            function getFilter(w, h, radius) {
                 const key = w + '|' + h + '|' + radius;
-                const existing = filterCache.get(key);
-                if (existing) return existing;
+                let entry = filterCache.get(key);
+                if (entry) return entry;
 
                 const margin = 40;
                 const id = 'lens-' + uid++;
@@ -1321,8 +1324,9 @@
 
                 filter.append(feImage, feDisp);
                 defs.appendChild(filter);
-                filterCache.set(key, id);
-                return id;
+                entry = { key, id, node: filter };
+                filterCache.set(key, entry);
+                return entry;
             }
 
             function applyFilter(target) {
@@ -1330,14 +1334,54 @@
                 const w = Math.max(2, Math.round(rect.width));
                 const h = Math.max(2, Math.round(rect.height));
                 const radius = parseFloat(getComputedStyle(target.el).borderTopLeftRadius) || 0;
+                const filter = getFilter(w, h, radius);
                 const chain =
-                    'url(#' + getFilterId(w, h, radius) + ') blur(' + target.blur + 'px) saturate(1.5)';
+                    'url(#' + filter.id + ') blur(' + target.blur + 'px) saturate(1.5)';
+                target.filterKey = filter.key;
 
-                if (target.split && canSplit) {
+                if (target.split && canSplit && entranceDone(target)) {
                     applySplit(target, w, h, chain);
                 } else {
                     target.el.style.backdropFilter = chain;
                 }
+            }
+
+            // The scroll reveal fades elements in through an opacity
+            // transition, and an ancestor with opacity below 1 becomes its
+            // children's backdrop root — the split overlays would see only
+            // the card's own background instead of the page while it fades,
+            // then snap to frosted once the transition ends. So an element
+            // keeps the (visually identical) single-element filter until its
+            // entrance settles, then switches to the cheaper overlays.
+            function entranceDone(target) {
+                if (target.settled) return true;
+                if (!target.el.classList.contains('fade-in')) {
+                    target.settled = true;
+                    return true;
+                }
+                watchEntrance(target);
+                return false;
+            }
+
+            function watchEntrance(target) {
+                if (target.watching) return;
+                target.watching = true;
+                const settle = () => {
+                    setTimeout(() => {
+                        target.settled = true;
+                        applyFilter(target);
+                    }, 800);
+                };
+                if (target.el.classList.contains('visible')) {
+                    settle();
+                    return;
+                }
+                const observer = new MutationObserver(() => {
+                    if (!target.el.classList.contains('visible')) return;
+                    observer.disconnect();
+                    settle();
+                });
+                observer.observe(target.el, { attributes: true, attributeFilter: ['class'] });
             }
 
             // The overlays sit at z-index -1: below the element's content but
@@ -1383,9 +1427,16 @@
                 if (sizes === lastSizes) return;
                 lastSizes = sizes;
 
-                defs.replaceChildren();
-                filterCache.clear();
                 targets.forEach(applyFilter);
+
+                // Drop filters no longer referenced by any element
+                const used = new Set(targets.map((t) => t.filterKey));
+                filterCache.forEach((entry, key) => {
+                    if (!used.has(key)) {
+                        entry.node.remove();
+                        filterCache.delete(key);
+                    }
+                });
             }
 
             rebuild();
