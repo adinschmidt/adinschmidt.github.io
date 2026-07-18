@@ -335,6 +335,7 @@
         }
 
         .project-card {
+            position: relative; /* anchors the lens overlays injected by JS */
             padding: 30px 32px 32px;
             display: flex;
             flex-direction: column;
@@ -1202,9 +1203,21 @@
             const targets = [
                 { el: document.querySelector('nav'), blur: 8 },
                 ...[...document.querySelectorAll('.btn-glass')].map((el) => ({ el, blur: 6 })),
-                ...[...document.querySelectorAll('.project-card')].map((el) => ({ el, blur: 6 })),
-                { el: document.querySelector('.resume-frame'), blur: 6 },
+                ...[...document.querySelectorAll('.project-card')].map((el) => ({ el, blur: 6, split: true })),
+                { el: document.querySelector('.resume-frame'), blur: 6, split: true },
             ].filter((t) => t.el);
+
+            // Large surfaces split the glass in two layers: the displacement
+            // map is neutral everywhere except the rim band, so the interior
+            // can use a plain blur (which stays on the compositor fast path)
+            // while only a thin masked ring pays for the displacement filter.
+            const RING_MASK = 'linear-gradient(#000 0 0) exclude, linear-gradient(#000 0 0) content-box';
+            const canSplit = CSS.supports('mask', RING_MASK);
+
+            // Width of the refracting band along the rim, in element pixels
+            function bandFor(w, h) {
+                return Math.min(Math.min(w, h) * 0.42, 46);
+            }
 
             // Displacement map for a rounded-rect lens: neutral (no shift) in
             // the middle, bending outward across a band along the rim.
@@ -1230,7 +1243,7 @@
                 const cx = w / 2, cy = h / 2;
                 const hw = w / 2, hh = h / 2;
                 const r = Math.min(radius, hw, hh);
-                const band = Math.min(Math.min(w, h) * 0.42, 46);
+                const band = bandFor(w, h);
 
                 // Signed distance to the rounded-rect edge (negative inside)
                 function sdf(px, py) {
@@ -1310,9 +1323,46 @@
                 const w = Math.max(2, Math.round(rect.width));
                 const h = Math.max(2, Math.round(rect.height));
                 const radius = parseFloat(getComputedStyle(target.el).borderTopLeftRadius) || 0;
-                const id = getFilterId(w, h, radius);
-                target.el.style.backdropFilter =
-                    'url(#' + id + ') blur(' + target.blur + 'px) saturate(1.5)';
+                const chain =
+                    'url(#' + getFilterId(w, h, radius) + ') blur(' + target.blur + 'px) saturate(1.5)';
+
+                if (target.split && canSplit) {
+                    applySplit(target, w, h, chain);
+                } else {
+                    target.el.style.backdropFilter = chain;
+                }
+            }
+
+            // The overlays sit at z-index -1: below the element's content but
+            // (when the element is a stacking context) above its background,
+            // so their backdrop is the page behind the glass plus at most the
+            // element's own near-uniform gradient — the same input the
+            // single-element filter sees. The ring is inset 1px so the crisp
+            // border always stays on top, and the interior tucks 1px under
+            // the ring so no seam can open between the two.
+            function applySplit(target, w, h, chain) {
+                const band = Math.ceil(bandFor(w, h)) + 'px';
+                target.el.style.backdropFilter = 'none';
+
+                if (!target.ring) {
+                    target.interior = document.createElement('div');
+                    target.ring = document.createElement('div');
+                    [target.interior, target.ring].forEach((overlay) => {
+                        overlay.setAttribute('aria-hidden', 'true');
+                        overlay.style.position = 'absolute';
+                        overlay.style.zIndex = '-1';
+                        overlay.style.pointerEvents = 'none';
+                    });
+                    target.ring.style.inset = '1px';
+                    target.ring.style.borderRadius = 'inherit';
+                    target.ring.style.mask = RING_MASK;
+                    target.el.prepend(target.interior, target.ring);
+                }
+                target.interior.style.inset = band;
+                target.interior.style.backdropFilter =
+                    'blur(' + target.blur + 'px) saturate(1.5)';
+                target.ring.style.padding = band;
+                target.ring.style.backdropFilter = chain;
             }
 
             let lastSizes = '';
