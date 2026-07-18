@@ -1075,15 +1075,6 @@
 
             camera.position.z = 0;
 
-            // Gentle pointer parallax — the camera drifts slightly toward the
-            // cursor so the field shifts behind the glass panels
-            let parallaxTargetX = 0;
-            let parallaxTargetY = 0;
-            window.addEventListener('pointermove', (event) => {
-                parallaxTargetX = (event.clientX / window.innerWidth - 0.5) * 1.4;
-                parallaxTargetY = -(event.clientY / window.innerHeight - 0.5) * 1.4;
-            });
-
             const frameInterval = 1000 / 30;
             let animationFrameId = null;
             let isAnimating = false;
@@ -1102,9 +1093,6 @@
                 if (!prefersReducedMotion) {
                     elapsedTime += deltaSeconds;
                     timeUniform.value = elapsedTime;
-
-                    camera.position.x += (parallaxTargetX - camera.position.x) * 0.04;
-                    camera.position.y += (parallaxTargetY - camera.position.y) * 0.04;
 
                     // Gentle twinkling — slow, subtle opacity flutter
                     allMeshes.forEach((entry, i) => {
