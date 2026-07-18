@@ -666,6 +666,9 @@
     <div class="nebula" aria-hidden="true"></div>
     <canvas id="star-canvas"></canvas>
 
+    <!-- Filter host for liquid-glass refraction (populated by JS in Chromium) -->
+    <svg id="lens-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs></defs></svg>
+
     <!-- Navigation -->
     <nav>
         <a href="#" class="logo">Adin Schmidt</a>
@@ -1119,6 +1122,130 @@
                 });
             });
 
+        })();
+    </script>
+
+    <!-- Liquid-glass refraction: per-element SVG displacement filters.
+         Chromium is the only engine that applies url() filters inside
+         backdrop-filter, so other browsers keep the plain frosted blur. -->
+    <script>
+        (function () {
+            if (!window.chrome || !CSS.supports('backdrop-filter', 'url(#lens)')) return;
+
+            const SVG_NS = 'http://www.w3.org/2000/svg';
+            const defs = document.querySelector('#lens-defs defs');
+            const targets = [
+                { el: document.querySelector('nav'), blur: 8 },
+                ...[...document.querySelectorAll('.btn-glass')].map((el) => ({ el, blur: 6 })),
+                ...[...document.querySelectorAll('.project-card')].map((el) => ({ el, blur: 6 })),
+                { el: document.querySelector('.resume-frame'), blur: 6 },
+            ].filter((t) => t.el);
+
+            // Displacement map for a rounded-rect lens: neutral (no shift) in
+            // the middle, bending outward across a band along the rim.
+            // R encodes X displacement, G encodes Y; 127.5 is neutral.
+            function makeMap(w, h, radius) {
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                const img = ctx.createImageData(w, h);
+                const data = img.data;
+                const cx = w / 2, cy = h / 2;
+                const hw = w / 2, hh = h / 2;
+                const r = Math.min(radius, hw, hh);
+                const band = Math.min(Math.min(w, h) * 0.42, 46);
+
+                // Signed distance to the rounded-rect edge (negative inside)
+                function sdf(px, py) {
+                    const qx = Math.abs(px - cx) - (hw - r);
+                    const qy = Math.abs(py - cy) - (hh - r);
+                    const ox = Math.max(qx, 0), oy = Math.max(qy, 0);
+                    return Math.sqrt(ox * ox + oy * oy) + Math.min(Math.max(qx, qy), 0) - r;
+                }
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const px = x + 0.5, py = y + 0.5;
+                        const d = sdf(px, py);
+                        const t = Math.min(Math.max(1 + d / band, 0), 1);
+                        const fall = t * t * t;
+                        let nx = sdf(px + 1, py) - sdf(px - 1, py);
+                        let ny = sdf(px, py + 1) - sdf(px, py - 1);
+                        const len = Math.hypot(nx, ny) || 1;
+                        nx /= len;
+                        ny /= len;
+                        const i = (y * w + x) * 4;
+                        data[i] = Math.round(127.5 + nx * fall * 127.5);
+                        data[i + 1] = Math.round(127.5 + ny * fall * 127.5);
+                        data[i + 2] = 0;
+                        data[i + 3] = 255;
+                    }
+                }
+                ctx.putImageData(img, 0, 0);
+                return canvas.toDataURL();
+            }
+
+            let uid = 0;
+            function buildFilter(target) {
+                const rect = target.el.getBoundingClientRect();
+                const w = Math.max(2, Math.round(rect.width));
+                const h = Math.max(2, Math.round(rect.height));
+                const radius = parseFloat(getComputedStyle(target.el).borderTopLeftRadius) || 0;
+                const margin = 40;
+
+                const id = 'lens-' + uid++;
+                const filter = document.createElementNS(SVG_NS, 'filter');
+                filter.setAttribute('id', id);
+                filter.setAttribute('filterUnits', 'userSpaceOnUse');
+                filter.setAttribute('color-interpolation-filters', 'sRGB');
+                filter.setAttribute('x', -margin);
+                filter.setAttribute('y', -margin);
+                filter.setAttribute('width', w + margin * 2);
+                filter.setAttribute('height', h + margin * 2);
+
+                const feImage = document.createElementNS(SVG_NS, 'feImage');
+                feImage.setAttribute('href', makeMap(w, h, radius));
+                feImage.setAttribute('x', 0);
+                feImage.setAttribute('y', 0);
+                feImage.setAttribute('width', w);
+                feImage.setAttribute('height', h);
+                feImage.setAttribute('result', 'map');
+
+                const feDisp = document.createElementNS(SVG_NS, 'feDisplacementMap');
+                feDisp.setAttribute('in', 'SourceGraphic');
+                feDisp.setAttribute('in2', 'map');
+                feDisp.setAttribute('scale', 32);
+                feDisp.setAttribute('xChannelSelector', 'R');
+                feDisp.setAttribute('yChannelSelector', 'G');
+
+                filter.append(feImage, feDisp);
+                defs.appendChild(filter);
+                target.filterNode = filter;
+                target.el.style.backdropFilter =
+                    'url(#' + id + ') blur(' + target.blur + 'px) saturate(1.5)';
+            }
+
+            function rebuild() {
+                targets.forEach((t) => {
+                    if (t.filterNode) {
+                        t.filterNode.remove();
+                        t.filterNode = null;
+                    }
+                });
+                targets.forEach(buildFilter);
+            }
+
+            rebuild();
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(rebuild);
+            }
+
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(rebuild, 250);
+            });
         })();
     </script>
 
