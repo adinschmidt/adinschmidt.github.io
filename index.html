@@ -1032,6 +1032,11 @@
             ];
 
             const allMeshes = [];
+            // Star drift runs on the GPU: the vertex shader loops each star's
+            // z from zFar towards zNear as uTime advances, so position
+            // buffers are uploaded once and never touched again.
+            const timeUniform = { value: 0 };
+            const zRange = (zNear - zFar).toFixed(1);
             starLayers.forEach((layer) => {
                 const scaledCount = Math.round(layer.count * Math.max(countScale, 1));
                 const geo = new THREE.BufferGeometry();
@@ -1048,9 +1053,20 @@
                     depthWrite: false,
                     blending: THREE.AdditiveBlending,
                 });
+                mat.onBeforeCompile = (shader) => {
+                    shader.uniforms.uTime = timeUniform;
+                    shader.uniforms.uSpeed = { value: layer.speed };
+                    shader.vertexShader = shader.vertexShader
+                        .replace('void main() {', 'uniform float uTime;\nuniform float uSpeed;\nvoid main() {')
+                        .replace(
+                            '#include <begin_vertex>',
+                            '#include <begin_vertex>\n' +
+                            'transformed.z = ' + zFar.toFixed(1) + ' + mod( transformed.z - (' + zFar.toFixed(1) + ') + uSpeed * uTime, ' + zRange + ' );'
+                        );
+                };
                 const mesh = new THREE.Points(geo, mat);
                 scene.add(mesh);
-                allMeshes.push({ mesh, mat, geo, baseOpacity: layer.opacity, baseSize: layer.size, speed: layer.speed, spreadXY: layer.spreadXY });
+                allMeshes.push({ mesh, mat, baseOpacity: layer.opacity, baseSize: layer.size });
             });
 
             camera.position.z = 0;
@@ -1081,26 +1097,10 @@
 
                 if (!prefersReducedMotion) {
                     elapsedTime += deltaSeconds;
+                    timeUniform.value = elapsedTime;
 
                     camera.position.x += (parallaxTargetX - camera.position.x) * 0.04;
                     camera.position.y += (parallaxTargetY - camera.position.y) * 0.04;
-
-                    // Move each star towards camera along Z, recycle when past
-                    allMeshes.forEach((entry) => {
-                        const posAttr = entry.geo.attributes.position;
-                        const arr = posAttr.array;
-                        const dz = entry.speed * deltaSeconds;
-                        for (let i = 0; i < posAttr.count; i++) {
-                            arr[i * 3 + 2] += dz;
-                            // When a star passes the camera, send it back to the far end
-                            if (arr[i * 3 + 2] > zNear) {
-                                arr[i * 3]     = (Math.random() - 0.5) * entry.spreadXY;
-                                arr[i * 3 + 1] = (Math.random() - 0.5) * entry.spreadXY;
-                                arr[i * 3 + 2] = zFar + Math.random() * 10;
-                            }
-                        }
-                        posAttr.needsUpdate = true;
-                    });
 
                     // Gentle twinkling — slow, subtle opacity flutter
                     allMeshes.forEach((entry, i) => {
@@ -1206,12 +1206,23 @@
             // Displacement map for a rounded-rect lens: neutral (no shift) in
             // the middle, bending outward across a band along the rim.
             // R encodes X displacement, G encodes Y; 127.5 is neutral.
+            // Maps are cached by size (the six project cards share one) and
+            // generated at half resolution — the field is a smooth gradient,
+            // so feImage upscales it with no visible difference.
+            const MAP_SCALE = 0.5;
+            const mapCache = new Map();
             function makeMap(w, h, radius) {
+                const key = w + '|' + h + '|' + radius;
+                const cached = mapCache.get(key);
+                if (cached) return cached;
+
+                const mapW = Math.max(2, Math.round(w * MAP_SCALE));
+                const mapH = Math.max(2, Math.round(h * MAP_SCALE));
                 const canvas = document.createElement('canvas');
-                canvas.width = w;
-                canvas.height = h;
+                canvas.width = mapW;
+                canvas.height = mapH;
                 const ctx = canvas.getContext('2d');
-                const img = ctx.createImageData(w, h);
+                const img = ctx.createImageData(mapW, mapH);
                 const data = img.data;
                 const cx = w / 2, cy = h / 2;
                 const hw = w / 2, hh = h / 2;
@@ -1226,9 +1237,9 @@
                     return Math.sqrt(ox * ox + oy * oy) + Math.min(Math.max(qx, qy), 0) - r;
                 }
 
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        const px = x + 0.5, py = y + 0.5;
+                for (let y = 0; y < mapH; y++) {
+                    for (let x = 0; x < mapW; x++) {
+                        const px = (x + 0.5) / MAP_SCALE, py = (y + 0.5) / MAP_SCALE;
                         const d = sdf(px, py);
                         const t = Math.min(Math.max(1 + d / band, 0), 1);
                         const fall = t * t * t;
@@ -1237,7 +1248,7 @@
                         const len = Math.hypot(nx, ny) || 1;
                         nx /= len;
                         ny /= len;
-                        const i = (y * w + x) * 4;
+                        const i = (y * mapW + x) * 4;
                         data[i] = Math.round(127.5 + nx * fall * 127.5);
                         data[i + 1] = Math.round(127.5 + ny * fall * 127.5);
                         data[i + 2] = 0;
@@ -1245,17 +1256,21 @@
                     }
                 }
                 ctx.putImageData(img, 0, 0);
-                return canvas.toDataURL();
+                const url = canvas.toDataURL();
+                mapCache.set(key, url);
+                return url;
             }
 
             let uid = 0;
-            function buildFilter(target) {
-                const rect = target.el.getBoundingClientRect();
-                const w = Math.max(2, Math.round(rect.width));
-                const h = Math.max(2, Math.round(rect.height));
-                const radius = parseFloat(getComputedStyle(target.el).borderTopLeftRadius) || 0;
-                const margin = 40;
+            const filterCache = new Map();
 
+            // Same-sized elements (all six project cards) share one filter
+            function getFilterId(w, h, radius) {
+                const key = w + '|' + h + '|' + radius;
+                const existing = filterCache.get(key);
+                if (existing) return existing;
+
+                const margin = 40;
                 const id = 'lens-' + uid++;
                 const filter = document.createElementNS(SVG_NS, 'filter');
                 filter.setAttribute('id', id);
@@ -1283,19 +1298,34 @@
 
                 filter.append(feImage, feDisp);
                 defs.appendChild(filter);
-                target.filterNode = filter;
+                filterCache.set(key, id);
+                return id;
+            }
+
+            function applyFilter(target) {
+                const rect = target.el.getBoundingClientRect();
+                const w = Math.max(2, Math.round(rect.width));
+                const h = Math.max(2, Math.round(rect.height));
+                const radius = parseFloat(getComputedStyle(target.el).borderTopLeftRadius) || 0;
+                const id = getFilterId(w, h, radius);
                 target.el.style.backdropFilter =
                     'url(#' + id + ') blur(' + target.blur + 'px) saturate(1.5)';
             }
 
+            let lastSizes = '';
             function rebuild() {
-                targets.forEach((t) => {
-                    if (t.filterNode) {
-                        t.filterNode.remove();
-                        t.filterNode = null;
-                    }
-                });
-                targets.forEach(buildFilter);
+                // Skip when no element changed size (e.g. fonts.ready firing
+                // after the fonts were already in place for the first build)
+                const sizes = targets.map((t) => {
+                    const rect = t.el.getBoundingClientRect();
+                    return Math.round(rect.width) + 'x' + Math.round(rect.height);
+                }).join('|');
+                if (sizes === lastSizes) return;
+                lastSizes = sizes;
+
+                defs.replaceChildren();
+                filterCache.clear();
+                targets.forEach(applyFilter);
             }
 
             rebuild();
@@ -1456,10 +1486,15 @@
         // has mostly scrolled out of view
         const nav = document.querySelector('nav');
         const hero = document.querySelector('.hero');
+        let heroThreshold = hero.offsetHeight * 0.6;
         function updateNav() {
-            nav.classList.toggle('visible', window.scrollY > hero.offsetHeight * 0.6);
+            nav.classList.toggle('visible', window.scrollY > heroThreshold);
         }
         window.addEventListener('scroll', updateNav, { passive: true });
+        window.addEventListener('resize', () => {
+            heroThreshold = hero.offsetHeight * 0.6;
+            updateNav();
+        }, { passive: true });
         updateNav();
     </script>
 </body>
