@@ -9,25 +9,25 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <!-- Three.js for star field background -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <style>
         :root {
-            --bg-primary: #0a0a0b;
-            --bg-secondary: #111113;
-            --bg-card: #161618;
-            --border: #2a2a2e;
-            --text-primary: #e8e8eb;
-            --text-secondary: #8b8b95;
-            --text-muted: #5a5a64;
-            --accent: #00d4aa;
-            --accent-glow: rgba(0, 212, 170, 0.15);
-            --accent-hover: #00f5c4;
-            --gradient-start: #00d4aa;
-            --gradient-end: #00a3ff;
+            --bg: #05060e;
+            --text-primary: #eef0f8;
+            --text-secondary: #9aa1b5;
+            --text-muted: #5d6377;
+            --accent: #f0c987;
+            --accent-soft: rgba(240, 201, 135, 0.14);
+            --glass-fill: rgba(255, 255, 255, 0.045);
+            --glass-fill-strong: rgba(255, 255, 255, 0.07);
+            --glass-border: rgba(255, 255, 255, 0.10);
+            --glass-border-bright: rgba(255, 255, 255, 0.22);
+            --glass-highlight: rgba(255, 255, 255, 0.14);
+            --radius: 20px;
         }
 
         * {
@@ -41,12 +41,25 @@
         }
 
         body {
-            font-family: 'Instrument Sans', -apple-system, sans-serif;
-            background: var(--bg-primary);
+            font-family: 'Geist', -apple-system, 'Segoe UI', sans-serif;
+            background: var(--bg);
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::selection {
+            background: rgba(240, 201, 135, 0.28);
+            color: var(--text-primary);
+        }
+
+        a:focus-visible,
+        button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+            border-radius: 4px;
         }
 
         /* Noise texture overlay */
@@ -58,9 +71,21 @@
             width: 100%;
             height: 100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-            opacity: 0.03;
+            opacity: 0.025;
             pointer-events: none;
             z-index: 1000;
+        }
+
+        /* Faint nebula tint sitting behind the star canvas */
+        .nebula {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            pointer-events: none;
+            background:
+                radial-gradient(60% 50% at 78% 10%, rgba(74, 88, 255, 0.10), transparent 65%),
+                radial-gradient(50% 45% at 12% 72%, rgba(150, 92, 255, 0.07), transparent 60%),
+                radial-gradient(38% 32% at 55% 42%, rgba(255, 196, 130, 0.035), transparent 60%);
         }
 
         /* Three.js Star Field Canvas */
@@ -75,209 +100,184 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 0 24px;
             position: relative;
         }
 
-        /* Navigation */
+        /* Shared liquid-glass surface */
+        .glass {
+            background: linear-gradient(165deg, var(--glass-fill-strong), var(--glass-fill) 45%, rgba(255, 255, 255, 0.055));
+            backdrop-filter: blur(10px) saturate(1.5);
+            -webkit-backdrop-filter: blur(10px) saturate(1.5);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow:
+                0 24px 48px rgba(2, 3, 10, 0.45),
+                inset 0 1px 0 var(--glass-highlight);
+        }
+
+        /* Navigation — floating glass pill */
         nav {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 100;
-            padding: 20px 0;
-            background: rgba(10, 10, 11, 0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-            transform: translateY(-100%);
-            opacity: 0;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        nav.visible {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        nav .container {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 28px;
+            padding: 10px 12px 10px 22px;
+            border-radius: 999px;
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+            backdrop-filter: blur(14px) saturate(1.6);
+            -webkit-backdrop-filter: blur(14px) saturate(1.6);
+            border: 1px solid var(--glass-border);
+            box-shadow:
+                0 12px 32px rgba(2, 3, 10, 0.45),
+                inset 0 1px 0 var(--glass-highlight);
+            white-space: nowrap;
         }
 
         .logo {
-            font-family: 'IBM Plex Mono', monospace;
             font-size: 14px;
             font-weight: 600;
+            letter-spacing: -0.01em;
             color: var(--text-primary);
             text-decoration: none;
-            letter-spacing: -0.02em;
-        }
-
-        .logo::before {
-            content: '~/';
-            color: var(--accent);
         }
 
         .nav-links {
             display: flex;
-            gap: 32px;
+            align-items: center;
+            gap: 4px;
         }
 
         .nav-links a {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 13px;
+            font-size: 13.5px;
+            font-weight: 500;
             color: var(--text-secondary);
             text-decoration: none;
-            transition: color 0.2s ease;
-            position: relative;
+            padding: 7px 14px;
+            border-radius: 999px;
+            transition: color 0.2s ease, background 0.2s ease;
         }
 
         .nav-links a:hover {
-            color: var(--accent);
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 0;
-            height: 1px;
-            background: var(--accent);
-            transition: width 0.2s ease;
-        }
-
-        .nav-links a:hover::after {
-            width: 100%;
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         /* Hero Section */
         .hero {
-            min-height: 100vh;
+            min-height: 100svh;
             display: flex;
-            align-items: flex-start;
-            padding: 15vh 0 80px;
-            position: relative;
+            align-items: center;
+            padding: 140px 0 80px;
         }
 
         .hero-content {
-            max-width: 800px;
+            max-width: 760px;
         }
 
         .hero-label {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 13px;
+            font-family: 'Geist Mono', monospace;
+            font-size: 12.5px;
+            font-weight: 400;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
             color: var(--accent);
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            margin-bottom: 28px;
             opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
+            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             animation-delay: 0.1s;
         }
 
-        .hero-label::before {
-            content: '';
-            width: 32px;
-            height: 1px;
-            background: var(--accent);
-        }
-
         .hero h1 {
-            font-size: clamp(48px, 8vw, 96px);
-            font-weight: 700;
-            line-height: 1.05;
-            letter-spacing: -0.03em;
-            margin-bottom: 24px;
+            font-size: clamp(52px, 9vw, 108px);
+            font-weight: 500;
+            line-height: 1.02;
+            letter-spacing: -0.045em;
+            margin-bottom: 28px;
             opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
+            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             animation-delay: 0.2s;
         }
 
-        .hero h1 .name {
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-tagline {
-            font-size: clamp(24px, 4vw, 36px);
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
-            animation-delay: 0.25s;
-        }
-
-        .hero-tagline .gradient {
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 600;
-        }
-
         .hero-desc {
-            font-size: 18px;
+            font-size: 19px;
+            font-weight: 400;
             color: var(--text-secondary);
-            max-width: 540px;
-            margin-bottom: 48px;
+            max-width: 520px;
+            margin-bottom: 44px;
             opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
+            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             animation-delay: 0.3s;
         }
 
         .hero-actions {
             display: flex;
-            gap: 16px;
+            gap: 14px;
             flex-wrap: wrap;
             opacity: 0;
-            animation: fadeInUp 0.6s ease forwards;
+            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             animation-delay: 0.4s;
         }
 
+        @keyframes riseIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+                filter: blur(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        /* Buttons */
         .btn {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 14px;
+            font-family: inherit;
+            font-size: 14.5px;
             font-weight: 500;
-            padding: 14px 28px;
-            border-radius: 6px;
+            padding: 13px 26px;
+            border-radius: 999px;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.25s ease;
+            gap: 9px;
+            transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
             cursor: pointer;
             border: none;
         }
 
         .btn-primary {
-            background: var(--accent);
-            color: var(--bg-primary);
+            background: rgba(255, 255, 255, 0.92);
+            color: #0a0c18;
         }
 
         .btn-primary:hover {
-            background: var(--accent-hover);
-            box-shadow: 0 0 30px var(--accent-glow);
+            background: #ffffff;
             transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(255, 255, 255, 0.12);
         }
 
-        .btn-secondary {
-            background: transparent;
+        .btn-glass {
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+            backdrop-filter: blur(10px) saturate(1.5);
+            -webkit-backdrop-filter: blur(10px) saturate(1.5);
             color: var(--text-primary);
-            border: 1px solid var(--border);
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 1px 0 var(--glass-highlight);
         }
 
-        .btn-secondary:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+        .btn-glass:hover {
+            border-color: var(--glass-border-bright);
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06));
+            transform: translateY(-2px);
         }
 
         .btn .btn-icon {
@@ -286,103 +286,115 @@
             flex-shrink: 0;
         }
 
-        /* Floating elements */
-        .hero-float {
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 400px;
-            height: 400px;
-            opacity: 0;
-            animation: fadeIn 1s ease forwards;
-            animation-delay: 0.5s;
-            pointer-events: none;
-        }
-
-        .float-circle {
-            position: absolute;
-            border-radius: 50%;
-            border: 1px solid var(--border);
-        }
-
-        .float-circle:nth-child(1) {
-            width: 300px;
-            height: 300px;
-            top: 50px;
-            right: 50px;
-            animation: float 8s ease-in-out infinite;
-        }
-
-        .float-circle:nth-child(2) {
-            width: 200px;
-            height: 200px;
-            top: 100px;
-            right: 100px;
-            border-color: var(--accent);
-            opacity: 0.3;
-            animation: float 6s ease-in-out infinite reverse;
-        }
-
-        .float-circle:nth-child(3) {
-            width: 100px;
-            height: 100px;
-            top: 150px;
-            right: 150px;
-            background: var(--accent-glow);
-            animation: pulse 4s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.1); }
-        }
-
         /* Section styles */
         section {
-            padding: 120px 0;
-            position: relative;
+            padding: 110px 0;
+            scroll-margin-top: 40px;
         }
 
         .section-header {
-            margin-bottom: 64px;
+            margin-bottom: 56px;
         }
 
         .section-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Geist Mono', monospace;
             font-size: 12px;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
             color: var(--accent);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .section-label::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, var(--border), transparent);
+            margin-bottom: 14px;
         }
 
         .section-title {
-            font-size: clamp(32px, 5vw, 48px);
+            font-size: clamp(32px, 5vw, 46px);
+            font-weight: 500;
+            letter-spacing: -0.03em;
+        }
+
+        /* Projects Section */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .project-card {
+            padding: 30px 32px 32px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--glass-border-bright);
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.07));
+        }
+
+        .project-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .project-tags {
+            font-family: 'Geist Mono', monospace;
+            font-size: 11.5px;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+        }
+
+        .project-tags .dot {
+            margin: 0 7px;
+            opacity: 0.5;
+        }
+
+        .project-link {
+            color: var(--text-muted);
+            transition: color 0.2s ease, transform 0.2s ease;
+            flex-shrink: 0;
+            display: inline-flex;
+        }
+
+        .project-card:hover .project-link {
+            color: var(--accent);
+        }
+
+        .project-link:hover {
+            transform: translate(2px, -2px);
+        }
+
+        .project-link svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .project-card h3 {
+            font-size: 21px;
             font-weight: 600;
             letter-spacing: -0.02em;
+            margin-bottom: 10px;
+        }
+
+        .project-card h3 a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .project-card h3 a:hover {
+            color: var(--accent);
+        }
+
+        .project-card p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.65;
         }
 
         /* Resume Section */
-        #resume {
-            background: var(--bg-secondary);
-        }
-
         .resume-wrapper {
             display: grid;
             grid-template-columns: 1fr 1.5fr;
@@ -390,20 +402,13 @@
             align-items: start;
         }
 
-        .resume-info h3 {
-            font-size: 24px;
-            margin-bottom: 16px;
-        }
-
         .resume-info p {
             color: var(--text-secondary);
-            margin-bottom: 24px;
+            margin: 20px 0 28px;
+            max-width: 360px;
         }
 
         .resume-frame {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
             overflow: hidden;
             position: relative;
             aspect-ratio: 8.5/11;
@@ -417,15 +422,15 @@
             justify-content: space-between;
             align-items: center;
             gap: 16px;
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--glass-border);
             flex: 0 0 auto;
         }
 
         .resume-status {
+            font-family: 'Geist Mono', monospace;
             color: var(--text-secondary);
-            font-size: 13px;
+            font-size: 12.5px;
             min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -444,17 +449,17 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
             color: var(--text-primary);
             cursor: pointer;
             transition: background 0.2s ease, border-color 0.2s ease;
         }
 
         .resume-control:hover {
-            background: var(--bg-secondary);
-            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.10);
+            border-color: var(--glass-border-bright);
         }
 
         .resume-control svg {
@@ -470,20 +475,22 @@
             align-items: center;
             gap: 18px;
             padding: 20px;
-            background: #e9edf2;
+            background: rgba(3, 4, 12, 0.35);
         }
 
         .resume-page {
             width: 100%;
             max-width: 100%;
             background: #fff;
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+            border-radius: 4px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
         }
 
         .resume-page canvas {
             display: block;
             width: 100%;
             height: auto;
+            border-radius: 4px;
         }
 
         .resume-loading {
@@ -493,128 +500,18 @@
             text-align: center;
         }
 
-        .resume-frame::before {
-            display: none;
-        }
-
-        /* Projects Section */
-        .projects-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
-        }
-
-        .project-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 32px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .project-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .project-card:hover {
-            border-color: var(--accent);
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .project-card:hover::before {
-            opacity: 1;
-        }
-
-        .project-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-        }
-
-        .project-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--accent-glow);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .resume-loading a {
             color: var(--accent);
-        }
-
-        .project-icon svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        .project-link {
-            color: var(--text-muted);
-            transition: color 0.2s ease;
-        }
-
-        .project-link:hover {
-            color: var(--accent);
-        }
-
-        .project-link svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .project-card h3 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .project-card h3 a {
-            color: inherit;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .project-card h3 a:hover {
-            color: var(--accent);
-        }
-
-        .project-tags {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-
-        .project-tag {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 11px;
-            padding: 4px 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            color: var(--text-secondary);
-        }
-
-        .project-card p {
-            color: var(--text-secondary);
-            font-size: 15px;
-            line-height: 1.7;
         }
 
         /* Footer */
         footer {
-            padding: 48px 0;
-            border-top: 1px solid var(--border);
+            padding: 44px 0 52px;
+        }
+
+        footer .container {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 36px;
         }
 
         .footer-content {
@@ -624,8 +521,8 @@
         }
 
         .footer-text {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 13px;
+            font-family: 'Geist Mono', monospace;
+            font-size: 12.5px;
             color: var(--text-muted);
         }
 
@@ -637,6 +534,7 @@
         .footer-links a {
             color: var(--text-secondary);
             transition: color 0.2s ease;
+            display: inline-flex;
         }
 
         .footer-links a:hover {
@@ -648,27 +546,11 @@
             height: 20px;
         }
 
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
+        /* Scroll reveal */
         .fade-in {
             opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.6s ease;
+            transform: translateY(24px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
         }
 
         .fade-in.visible {
@@ -676,18 +558,73 @@
             transform: translateY(0);
         }
 
-        /* Responsive */
-        @media (max-width: 900px) {
-            .hero-float {
-                display: none;
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
             }
 
+            .hero-label,
+            .hero h1,
+            .hero-desc,
+            .hero-actions {
+                animation: none;
+                opacity: 1;
+            }
+
+            .fade-in {
+                opacity: 1;
+                transform: none;
+                transition: none;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
             .resume-wrapper {
                 grid-template-columns: 1fr;
             }
 
             .resume-frame {
                 max-height: 650px;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            nav {
+                gap: 8px;
+                padding: 8px 8px 8px 16px;
+                max-width: calc(100vw - 24px);
+            }
+
+            .logo {
+                font-size: 13px;
+            }
+
+            .nav-links a {
+                font-size: 12.5px;
+                padding: 6px 10px;
+            }
+
+            .hero {
+                padding-top: 130px;
+            }
+
+            .hero-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+
+            section {
+                padding: 72px 0;
             }
 
             .resume-toolbar {
@@ -701,58 +638,25 @@
                 justify-content: flex-end;
             }
 
-            .projects-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 600px) {
-            nav .container {
-                flex-direction: column;
-                gap: 16px;
-            }
-
-            .nav-links {
-                gap: 20px;
-            }
-
-            .hero {
-                padding-top: 160px;
-            }
-
-            .hero-actions {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            section {
-                padding: 80px 0;
-            }
-
             .footer-content {
                 flex-direction: column;
-                gap: 24px;
+                gap: 20px;
                 text-align: center;
             }
         }
     </style>
 </head>
 <body>
+    <div class="nebula" aria-hidden="true"></div>
     <canvas id="star-canvas"></canvas>
 
     <!-- Navigation -->
     <nav>
-        <div class="container">
-            <a href="#" class="logo">adinschmidt</a>
-            <div class="nav-links">
-                <a href="#projects">Projects</a>
-                <a href="#resume">Resume</a>
-                <a href="https://github.com/adinschmidt" target="_blank">GitHub</a>
-            </div>
+        <a href="#" class="logo">Adin Schmidt</a>
+        <div class="nav-links">
+            <a href="#projects">Projects</a>
+            <a href="#resume">Resume</a>
+            <a href="https://github.com/adinschmidt" target="_blank" rel="noopener">GitHub</a>
         </div>
     </nav>
 
@@ -761,43 +665,25 @@
         <div class="container">
             <div class="hero-content">
                 <div class="hero-label">Software Developer</div>
-                <h1><span class="name">Adin Schmidt</span></h1>
-                <p class="hero-tagline">Building tools that <span class="gradient">solve problems</span></p>
+                <h1>Adin Schmidt</h1>
                 <p class="hero-desc">
-                    I create developer tools, CLI utilities, and browser extensions
-                    that make workflows more efficient and data more accessible.
+                    I build developer tools, CLI utilities, and browser extensions
+                    that make workflows faster and data more accessible.
                 </p>
                 <div class="hero-actions">
                     <a href="#projects" class="btn btn-primary">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="7" height="7"></rect>
-                            <rect x="14" y="3" width="7" height="7"></rect>
-                            <rect x="14" y="14" width="7" height="7"></rect>
-                            <rect x="3" y="14" width="7" height="7"></rect>
-                        </svg>
-                        <span>Projects</span>
+                        <span>View projects</span>
                     </a>
-                    <a href="#resume" class="btn btn-secondary">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                        </svg>
+                    <a href="#resume" class="btn btn-glass">
                         <span>Resume</span>
                     </a>
-                    <a href="https://github.com/adinschmidt" target="_blank" class="btn btn-secondary">
+                    <a href="https://github.com/adinschmidt" target="_blank" rel="noopener" class="btn btn-glass">
                         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
                         </svg>
                         <span>GitHub</span>
                     </a>
                 </div>
-            </div>
-            <div class="hero-float" aria-hidden="true">
-                <div class="float-circle"></div>
-                <div class="float-circle"></div>
-                <div class="float-circle"></div>
             </div>
         </div>
     </section>
@@ -812,23 +698,14 @@
 
             <div class="projects-grid">
                 <!-- Affordable Housing Portal -->
-                <article class="project-card fade-in">
-                    <div class="project-header">
-                        <div class="project-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                            </svg>
-                        </div>
-                        <a href="https://github.com/CivicTechWR/affordable-housing-portal" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <article class="project-card glass fade-in">
+                    <div class="project-top">
+                        <span class="project-tags">TypeScript<span class="dot">·</span>Next.js<span class="dot">·</span>CivicTech</span>
+                        <a href="https://github.com/CivicTechWR/affordable-housing-portal" target="_blank" rel="noopener" class="project-link" aria-label="Affordable Housing Portal on GitHub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
                         </a>
                     </div>
-                    <h3><a href="https://github.com/CivicTechWR/affordable-housing-portal" target="_blank">Affordable Housing Portal</a></h3>
-                    <div class="project-tags">
-                        <span class="project-tag">TypeScript</span>
-                        <span class="project-tag">Next.js</span>
-                        <span class="project-tag">CivicTech</span>
-                    </div>
+                    <h3><a href="https://github.com/CivicTechWR/affordable-housing-portal" target="_blank" rel="noopener">Affordable Housing Portal</a></h3>
                     <p>
                         An affordable housing platform built on Bloom Housing for the Waterloo Region.
                         A single entry point for housing seekers to browse and apply for available listings,
@@ -837,23 +714,14 @@
                 </article>
 
                 <!-- AI Translator -->
-                <article class="project-card fade-in">
-                    <div class="project-header">
-                        <div class="project-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" />
-                            </svg>
-                        </div>
-                        <a href="https://github.com/adinschmidt/AI-translator" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <article class="project-card glass fade-in">
+                    <div class="project-top">
+                        <span class="project-tags">Browser Extension<span class="dot">·</span>Manifest V3<span class="dot">·</span>Tailwind</span>
+                        <a href="https://github.com/adinschmidt/AI-translator" target="_blank" rel="noopener" class="project-link" aria-label="AI Translator on GitHub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
                         </a>
                     </div>
-                    <h3><a href="https://adinschmidt.com/AI-translator/" target="_blank">AI Translator</a></h3>
-                    <div class="project-tags">
-                        <span class="project-tag">Browser Extension</span>
-                        <span class="project-tag">Manifest V3</span>
-                        <span class="project-tag">Tailwind</span>
-                    </div>
+                    <h3><a href="https://adinschmidt.com/AI-translator/" target="_blank" rel="noopener">AI Translator</a></h3>
                     <p>
                         A browser extension leveraging AI models for superior text and page translations.
                         Delivers more natural, context-aware results than traditional machine translation
@@ -862,23 +730,14 @@
                 </article>
 
                 <!-- MCP Servers -->
-                <article class="project-card fade-in">
-                    <div class="project-header">
-                        <div class="project-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
-                            </svg>
-                        </div>
-                        <a href="https://github.com/adinschmidt/mcps" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <article class="project-card glass fade-in">
+                    <div class="project-top">
+                        <span class="project-tags">TypeScript<span class="dot">·</span>MCP<span class="dot">·</span>Bun</span>
+                        <a href="https://github.com/adinschmidt/mcps" target="_blank" rel="noopener" class="project-link" aria-label="MCP Servers on GitHub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
                         </a>
                     </div>
-                    <h3><a href="https://github.com/adinschmidt/mcps" target="_blank">MCP Servers</a></h3>
-                    <div class="project-tags">
-                        <span class="project-tag">TypeScript</span>
-                        <span class="project-tag">MCP</span>
-                        <span class="project-tag">Bun</span>
-                    </div>
+                    <h3><a href="https://github.com/adinschmidt/mcps" target="_blank" rel="noopener">MCP Servers</a></h3>
                     <p>
                         A collection of Model Context Protocol servers for AI tool integration.
                         Includes Fastmail (mail, calendar, contacts) and Splitwise (all 27 API endpoints) connectors.
@@ -886,23 +745,14 @@
                 </article>
 
                 <!-- SPC Converter -->
-                <article class="project-card fade-in">
-                    <div class="project-header">
-                        <div class="project-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                            </svg>
-                        </div>
-                        <a href="https://github.com/adinschmidt/spc-converter" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <article class="project-card glass fade-in">
+                    <div class="project-top">
+                        <span class="project-tags">Rust<span class="dot">·</span>CLI<span class="dot">·</span>Spectroscopy</span>
+                        <a href="https://github.com/adinschmidt/spc-converter" target="_blank" rel="noopener" class="project-link" aria-label="SPC Converter on GitHub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
                         </a>
                     </div>
-                    <h3><a href="https://github.com/adinschmidt/spc-converter" target="_blank">SPC Converter</a></h3>
-                    <div class="project-tags">
-                        <span class="project-tag">Rust</span>
-                        <span class="project-tag">CLI</span>
-                        <span class="project-tag">Spectroscopy</span>
-                    </div>
+                    <h3><a href="https://github.com/adinschmidt/spc-converter" target="_blank" rel="noopener">SPC Converter</a></h3>
                     <p>
                         Convert proprietary .spc spectral files into open formats like JSON and CSV.
                         Extracts intensity data, calibration settings, and generates wavelength/Raman
@@ -911,23 +761,14 @@
                 </article>
 
                 <!-- Autorun -->
-                <article class="project-card fade-in">
-                    <div class="project-header">
-                        <div class="project-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                            </svg>
-                        </div>
-                        <a href="https://github.com/adinschmidt/autorun" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <article class="project-card glass fade-in">
+                    <div class="project-top">
+                        <span class="project-tags">Go<span class="dot">·</span>Web UI<span class="dot">·</span>Services</span>
+                        <a href="https://github.com/adinschmidt/autorun" target="_blank" rel="noopener" class="project-link" aria-label="Autorun on GitHub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
                         </a>
                     </div>
-                    <h3><a href="https://github.com/adinschmidt/autorun" target="_blank">Autorun</a></h3>
-                    <div class="project-tags">
-                        <span class="project-tag">Go</span>
-                        <span class="project-tag">Web UI</span>
-                        <span class="project-tag">Services</span>
-                    </div>
+                    <h3><a href="https://github.com/adinschmidt/autorun" target="_blank" rel="noopener">Autorun</a></h3>
                     <p>
                         A lightweight web UI for managing system services without command-line complexity.
                         Control launchd (macOS) or systemd (Linux) from your browser with a single static binary.
@@ -935,24 +776,14 @@
                 </article>
 
                 <!-- SafeRecall -->
-                <article class="project-card fade-in">
-                    <div class="project-header">
-                        <div class="project-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </div>
-                        <a href="https://github.com/adinschmidt/safe-recall" target="_blank" class="project-link" aria-label="View on GitHub">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <article class="project-card glass fade-in">
+                    <div class="project-top">
+                        <span class="project-tags">Rust<span class="dot">·</span>CLI<span class="dot">·</span>OCR</span>
+                        <a href="https://github.com/adinschmidt/safe-recall" target="_blank" rel="noopener" class="project-link" aria-label="SafeRecall on GitHub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
                         </a>
                     </div>
-                    <h3><a href="https://github.com/adinschmidt/safe-recall" target="_blank">SafeRecall</a></h3>
-                    <div class="project-tags">
-                        <span class="project-tag">Rust</span>
-                        <span class="project-tag">CLI</span>
-                        <span class="project-tag">OCR</span>
-                    </div>
+                    <h3><a href="https://github.com/adinschmidt/safe-recall" target="_blank" rel="noopener">SafeRecall</a></h3>
                     <p>
                         A CLI tool to OCR and search for text in your photos. Features built-in OCR
                         with no external dependencies, fast search via local SQLite, and compiles
@@ -980,10 +811,10 @@
                             <polyline points="15 3 21 3 21 9"></polyline>
                             <line x1="10" y1="14" x2="21" y2="3"></line>
                         </svg>
-                        <span>Open Full Resume</span>
+                        <span>Open full resume</span>
                     </a>
                 </div>
-                <div class="resume-frame fade-in">
+                <div class="resume-frame glass fade-in">
                     <div class="resume-toolbar">
                         <div class="resume-status" id="resume-status">Loading resume...</div>
                         <div class="resume-controls" aria-label="Resume controls">
@@ -1030,7 +861,7 @@
                     &copy; 2026 Adin Schmidt
                 </div>
                 <div class="footer-links">
-                    <a href="https://github.com/adinschmidt" target="_blank" aria-label="GitHub">
+                    <a href="https://github.com/adinschmidt" target="_blank" rel="noopener" aria-label="GitHub">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                     </a>
                 </div>
@@ -1046,16 +877,16 @@
 
             const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
             let prefersReducedMotion = reducedMotionQuery.matches;
-            
+
             const canvas = document.getElementById('star-canvas');
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false });
-            
+
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setClearColor(0x000000, 0);
-            
+
             // Create circular texture for soft round stars
             function createStarTexture() {
                 const canvas = document.createElement('canvas');
@@ -1078,7 +909,7 @@
             }
 
             const starTexture = createStarTexture();
-            
+
             // Generate star positions spread in X/Y, distributed along Z depth
             // Stars span from zFar (behind) to zNear (in front of camera)
             const zNear = -5;   // stars recycle before reaching camera
@@ -1092,7 +923,7 @@
                 }
                 return positions;
             }
-            
+
             // Resolution-independent scaling
             // Reference: 1080p screen. Sizes and counts scale so stars
             // look the same on 720p, 1080p, 1440p, and 4K displays.
@@ -1140,8 +971,17 @@
                 scene.add(mesh);
                 allMeshes.push({ mesh, mat, geo, baseOpacity: layer.opacity, baseSize: layer.size, speed: layer.speed, spreadXY: layer.spreadXY });
             });
-            
+
             camera.position.z = 0;
+
+            // Gentle pointer parallax — the camera drifts slightly toward the
+            // cursor so the field shifts behind the glass panels
+            let parallaxTargetX = 0;
+            let parallaxTargetY = 0;
+            window.addEventListener('pointermove', (event) => {
+                parallaxTargetX = (event.clientX / window.innerWidth - 0.5) * 1.4;
+                parallaxTargetY = -(event.clientY / window.innerHeight - 0.5) * 1.4;
+            });
 
             const frameInterval = 1000 / 30;
             let animationFrameId = null;
@@ -1160,6 +1000,9 @@
 
                 if (!prefersReducedMotion) {
                     elapsedTime += deltaSeconds;
+
+                    camera.position.x += (parallaxTargetX - camera.position.x) * 0.04;
+                    camera.position.y += (parallaxTargetY - camera.position.y) * 0.04;
 
                     // Move each star towards camera along Z, recycle when past
                     allMeshes.forEach((entry) => {
@@ -1247,7 +1090,7 @@
             } else if (typeof reducedMotionQuery.addListener === 'function') {
                 reducedMotionQuery.addListener(handleReducedMotionChange);
             }
-            
+
             // Handle resize — rescale star sizes to match new resolution
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -1259,7 +1102,7 @@
                     entry.mat.size = entry.baseSize * newScale;
                 });
             });
-            
+
         })();
     </script>
 
@@ -1403,29 +1246,6 @@
         }, observerOptions);
 
         document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-
-        // Nav scroll effect - only show after scrolling past hero
-        const nav = document.querySelector('nav');
-        const hero = document.querySelector('.hero');
-        window.addEventListener('scroll', () => {
-            const heroBottom = hero.offsetTop + hero.offsetHeight * 0.5;
-            if (window.scrollY > heroBottom) {
-                nav.classList.add('visible');
-            } else {
-                nav.classList.remove('visible');
-            }
-        });
-
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
     </script>
 </body>
 </html>
