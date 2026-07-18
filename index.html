@@ -965,7 +965,10 @@
             const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false });
 
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // Cap the render buffer at 1.5x: the stars are soft glow sprites,
+            // so the upscale on 2x displays is invisible but the full-screen
+            // fill cost drops by ~44%
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
             renderer.setClearColor(0x000000, 0);
 
             // Create circular texture for soft round stars
@@ -1177,7 +1180,7 @@
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
                 const newScale = (window.innerHeight * window.devicePixelRatio) / refHeight;
                 allMeshes.forEach((entry) => {
                     entry.mat.size = entry.baseSize * newScale;
