@@ -387,12 +387,13 @@
                 void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
             `;
 
-            // Orbital sunrise from 400 km over the night side. Earth is a
-            // sphere and the air around it is ray marched with Rayleigh and
-            // Mie single scattering, so the limb colours, the twilight on the
-            // ground, and the glare all follow from where the sun is. Scroll
-            // raises the sun, which is the same as the orbit carrying the
-            // camera toward the day side. Distances are in Earth radii.
+            // Sunrise from 400 km over the night side. Earth is a sphere and
+            // the air around it is ray marched with Rayleigh and Mie single
+            // scattering, so the limb colours, the twilight on the ground,
+            // and the glare all follow from where the sun is. The camera
+            // hovers over one spot and scroll turns the sky, as Earth's spin
+            // would, so the sun and the stars rise together. Distances are in
+            // Earth radii.
             // Surface colour, clouds, and the ocean mask come from textures
             // once they load; until then the ground is a flat dark albedo.
             const fragment = `
@@ -405,6 +406,8 @@
                 uniform vec3 uCamForward;
                 uniform float uTanHalf;
                 uniform vec3 uSun;
+                uniform mat3 uSkyFrame;
+                uniform float uSkyTurn;
                 uniform float uExposure;
                 uniform float uNight;
                 uniform mat3 uEarth;
@@ -586,16 +589,23 @@
 
                     col = pow(filmic(col * uExposure), vec3(1.0 / 2.2));
 
-                    // Stars sit in screen space; the camera never moves
+                    // Stars are fixed to the sky, which turns about the third
+                    // axis of uSkyFrame. The cells run in rows of latitude
+                    // around that axis, each row split into as many cells as
+                    // fit, so a cell covers about 4 CSS px mid-screen.
                     if (!ground) {
-                        vec2 g = frag / (4.0 * uScale);
+                        vec3 s = rd * uSkyFrame;
+                        float cell = 8.0 * uScale * uTanHalf / uRes.y;
+                        float lat = asin(clamp(s.z, -1.0, 1.0));
+                        float count = floor(2.0 * PI * cos((floor(lat / cell) + 0.5) * cell) / cell);
+                        vec2 g = vec2((atan(s.y, s.x) - uSkyTurn) / (2.0 * PI) * count, lat / cell);
                         vec2 id = floor(g);
                         if (hash(id) > 0.986) {
                             vec2 off = vec2(hash(id + 1.7), hash(id + 9.2)) - 0.5;
                             float r = length(fract(g) - 0.5 - off * 0.5);
                             float bright = pow(hash(id + 4.1), 4.0) * 0.9 + 0.06;
                             vec3 tint = mix(vec3(0.76, 0.83, 1.0), vec3(1.0, 0.89, 0.76), hash(id + 2.3));
-                            col += tint * bright * smoothstep(0.34, 0.0, r) * trans.g * (0.06 + 0.94 * uNight);
+                            col += tint * bright * smoothstep(0.34, 0.0, r) * trans * (0.06 + 0.94 * uNight);
                         }
                     }
 
@@ -637,7 +647,8 @@
                 res: uniform('uRes'), scale: uniform('uScale'),
                 camPos: uniform('uCamPos'), camRight: uniform('uCamRight'), camUp: uniform('uCamUp'),
                 camForward: uniform('uCamForward'), tanHalf: uniform('uTanHalf'),
-                sun: uniform('uSun'), exposure: uniform('uExposure'), night: uniform('uNight'),
+                sun: uniform('uSun'), skyFrame: uniform('uSkyFrame'), skyTurn: uniform('uSkyTurn'),
+                exposure: uniform('uExposure'), night: uniform('uNight'),
                 earth: uniform('uEarth'), textures: uniform('uTextures'),
             };
 
@@ -659,24 +670,39 @@
                 return t * t * (3 - 2 * t);
             };
 
-            // The sun climbs from 7° below the horizon to 20° above it,
-            // rising in the right third of any screen shape. The curve lingers
+            // The sky turns as one piece about a fixed axis, carrying the sun
+            // from 7° below the horizon to 20° above it. The sun crosses the
+            // limb in the right third of any screen shape. The curve lingers
             // before sunrise so the first scroll still shows the dawn glow
-            // building. Its path leans right, more on narrow screens, so on a
-            // phone it leaves the frame before it reaches the text.
-            function setSun(progress) {
+            // building. The path tilts right, more on narrow screens, so on a
+            // phone the sun leaves the frame before it reaches the text.
+            function setSky(progress) {
                 const aspect = canvas.width / canvas.height;
-                const clear = (-7 + 27 * Math.pow(progress, 1.3)) * DEG;
-                const lean = Math.min(Math.max(0.9 - 0.4 * aspect, 0.25), 0.8);
-                const yaw = Math.atan(0.26 * aspect * 2 * TAN_HALF) + lean * clear;
-                const elevation = clear - DIP;
-                gl.uniform3f(u.sun,
-                    Math.sin(yaw) * Math.cos(elevation),
-                    Math.sin(elevation),
-                    -Math.cos(yaw) * Math.cos(elevation));
+                const yaw = Math.atan(0.26 * aspect * 2 * TAN_HALF);
+                const tilt = Math.atan(Math.min(Math.max(0.9 - 0.4 * aspect, 0.25), 0.8));
+                const cy = Math.cos(yaw), sy = Math.sin(yaw);
+                const cd = Math.cos(DIP), sd = Math.sin(DIP);
+                const ct = Math.cos(tilt), st = Math.sin(tilt);
+                // Where the sun meets the limb, straight up from there, and
+                // level to its right. The axis is perpendicular to the sun's path.
+                const rise = [sy * cd, -sd, -cy * cd];
+                const climb = [sy * sd, cd, -cy * sd];
+                const side = [cy, 0, sy];
+                const heading = climb.map((v, i) => ct * v + st * side[i]);
+                const axis = side.map((v, i) => ct * v - st * climb[i]);
+                gl.uniformMatrix3fv(u.skyFrame, false, new Float32Array([...rise, ...heading, ...axis]));
+
+                // Dividing by cos(tilt) keeps the climb, not the path length,
+                // at 27°
+                const turn = (-7 + 27 * Math.pow(progress, 1.3)) * DEG / ct;
+                const sun = rise.map((v, i) => Math.cos(turn) * v + Math.sin(turn) * heading[i]);
+                gl.uniform1f(u.skyTurn, turn);
+                gl.uniform3fv(u.sun, sun);
+
                 // Exposure drops once the disc clears the limb, so the stars
                 // fade as they would on a camera metering for the sun, and
                 // keeps dropping as more of the ground comes into daylight
+                const clear = Math.asin(sun[1]) + DIP;
                 const night = 1 - smoothstep(-0.4 * DEG, 2 * DEG, clear);
                 const day = smoothstep(2 * DEG, 20 * DEG, clear);
                 gl.uniform1f(u.night, night);
@@ -781,7 +807,7 @@
                 gl.uniform3fv(u.camUp, up);
                 gl.uniform3fv(u.camForward, forward);
                 gl.uniform1f(u.tanHalf, TAN_HALF);
-                setSun(Math.max(introProgress(now), scrollProgress()));
+                setSky(Math.max(introProgress(now), scrollProgress()));
                 gl.drawArrays(gl.TRIANGLES, 0, 3);
                 if (!reduced && now - introStart < introMs) request();
             }
