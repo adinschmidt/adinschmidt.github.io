@@ -3,1610 +3,799 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adin Schmidt — Developer</title>
-    <meta name="description" content="Software developer building tools that solve real problems.">
-
-    <!-- Fonts -->
+    <title>Adin Schmidt</title>
+    <meta name="description" content="Software engineer in Waterloo, Ontario. Backend services, AI infrastructure, and developer tools.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-    <!-- Three.js for star field background -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #05060e;
-            --text-primary: #eef0f8;
-            --text-secondary: #9aa1b5;
-            --text-muted: #5d6377;
-            --accent: #f0c987;
-            --accent-soft: rgba(240, 201, 135, 0.14);
-            --glass-fill: rgba(255, 255, 255, 0.045);
-            --glass-fill-strong: rgba(255, 255, 255, 0.07);
-            --glass-border: rgba(255, 255, 255, 0.10);
-            --glass-border-bright: rgba(255, 255, 255, 0.22);
-            --glass-highlight: rgba(255, 255, 255, 0.14);
-            --radius: 20px;
+            --space: #000;
+            --text: #e8ebf1;
+            --dim: #8b93a5;
+            --faint: #5a6172;
+            --rule: rgba(232, 235, 241, 0.12);
+            --air: #8cb8ff;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Geist', -apple-system, 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text-primary);
+            font-size: 17px;
             line-height: 1.6;
-            min-height: 100vh;
-            overflow-x: hidden;
+            background: var(--space);
+            color: var(--text);
             -webkit-font-smoothing: antialiased;
+            font-variant-numeric: tabular-nums;
         }
 
-        ::selection {
-            background: rgba(240, 201, 135, 0.28);
-            color: var(--text-primary);
-        }
+        a { color: inherit; text-decoration: none; }
+        a:focus-visible { outline: 2px solid var(--air); outline-offset: 4px; border-radius: 2px; }
+        ::selection { background: rgba(140, 184, 255, 0.3); }
 
-        a:focus-visible,
-        button:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 3px;
-            border-radius: 4px;
-        }
+        /* The hero pins while the sun climbs over the limb */
+        .launch { height: 210vh; }
 
-        /* Noise texture overlay */
-        body::before {
-            content: '';
-            position: fixed;
+        .launch-pin {
+            position: sticky;
             top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-            opacity: 0.025;
-            pointer-events: none;
-            z-index: 1000;
-        }
-
-        /* Faint nebula tint sitting behind the star canvas */
-        .nebula {
-            position: fixed;
-            inset: 0;
-            z-index: -2;
-            pointer-events: none;
+            height: 100vh;
+            height: 100svh;
+            overflow: hidden;
+            /* Fallback sky when WebGL is unavailable */
             background:
-                radial-gradient(60% 50% at 78% 10%, rgba(74, 88, 255, 0.10), transparent 65%),
-                radial-gradient(50% 45% at 12% 72%, rgba(150, 92, 255, 0.07), transparent 60%),
-                radial-gradient(38% 32% at 55% 42%, rgba(255, 196, 130, 0.035), transparent 60%);
+                radial-gradient(90% 18% at 72% 78%, rgba(255, 170, 90, 0.35), transparent 70%),
+                radial-gradient(140% 30% at 40% 82%, rgba(70, 120, 255, 0.25), transparent 70%),
+                #000;
         }
 
-        /* Three.js Star Field Canvas */
-        #star-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
+        #limb {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 24px;
-            position: relative;
-        }
-
-        /* Shared liquid-glass surface */
-        .glass {
-            background: linear-gradient(165deg, var(--glass-fill-strong), var(--glass-fill) 45%, rgba(255, 255, 255, 0.055));
-            backdrop-filter: blur(10px) saturate(1.5);
-            -webkit-backdrop-filter: blur(10px) saturate(1.5);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius);
-            box-shadow:
-                0 24px 48px rgba(2, 3, 10, 0.45),
-                inset 0 1px 0 var(--glass-highlight);
-        }
-
-        /* Navigation — floating glass pill, appears once the hero scrolls away */
-        nav {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translate(-50%, calc(-100% - 32px));
-            opacity: 0;
-            visibility: hidden;
-            transition:
-                transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 0.35s ease,
-                visibility 0s linear 0.45s;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 28px;
-            padding: 10px 12px 10px 22px;
-            border-radius: 999px;
-            background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
-            backdrop-filter: blur(14px) saturate(1.6);
-            -webkit-backdrop-filter: blur(14px) saturate(1.6);
-            border: 1px solid var(--glass-border);
-            box-shadow:
-                0 12px 32px rgba(2, 3, 10, 0.45),
-                inset 0 1px 0 var(--glass-highlight);
-            white-space: nowrap;
-        }
-
-        nav.visible {
-            transform: translate(-50%, 0);
-            opacity: 1;
-            visibility: visible;
-            transition:
-                transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 0.35s ease,
-                visibility 0s;
-        }
-
-        .logo {
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .nav-links a {
-            font-size: 13.5px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: 7px 14px;
-            border-radius: 999px;
-            transition: color 0.2s ease, background 0.2s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        /* Hero Section */
-        .hero {
-            min-height: 100svh;
-            display: flex;
-            align-items: center;
-            padding: 140px 0 80px;
-        }
-
-        .hero-content {
-            max-width: 760px;
-        }
-
-        .hero-label {
-            font-family: 'Geist Mono', monospace;
-            font-size: 12.5px;
-            font-weight: 400;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--accent);
-            margin-bottom: 28px;
-            opacity: 0;
-            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            animation-delay: 0.1s;
-        }
-
-        .hero h1 {
-            font-size: clamp(52px, 9vw, 108px);
-            font-weight: 500;
-            line-height: 1.02;
-            letter-spacing: -0.045em;
-            margin-bottom: 28px;
-            opacity: 0;
-            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            animation-delay: 0.2s;
-        }
-
-        .hero-desc {
-            font-size: 19px;
-            font-weight: 400;
-            color: var(--text-secondary);
-            max-width: 520px;
-            margin-bottom: 44px;
-            opacity: 0;
-            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            animation-delay: 0.3s;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-            opacity: 0;
-            animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            animation-delay: 0.4s;
-        }
-
-        @keyframes riseIn {
-            from {
-                opacity: 0;
-                transform: translateY(18px);
-                filter: blur(6px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-                filter: blur(0);
-            }
-        }
-
-        /* Buttons */
-        .btn {
-            font-family: inherit;
-            font-size: 14.5px;
-            font-weight: 500;
-            padding: 13px 26px;
-            border-radius: 999px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-primary {
-            background: rgba(255, 255, 255, 0.92);
-            color: #0a0c18;
-        }
-
-        .btn-primary:hover {
-            background: #ffffff;
-            transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(255, 255, 255, 0.12);
-        }
-
-        .btn-glass {
-            background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
-            backdrop-filter: blur(10px) saturate(1.5);
-            -webkit-backdrop-filter: blur(10px) saturate(1.5);
-            color: var(--text-primary);
-            border: 1px solid var(--glass-border);
-            box-shadow: inset 0 1px 0 var(--glass-highlight);
-        }
-
-        .btn-glass:hover {
-            border-color: var(--glass-border-bright);
-            background: linear-gradient(165deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06));
-            transform: translateY(-2px);
-        }
-
-        .btn .btn-icon {
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
-        }
-
-        /* Section styles */
-        section {
-            padding: 110px 0;
-            scroll-margin-top: 40px;
-        }
-
-        .section-header {
-            margin-bottom: 56px;
-        }
-
-        .section-label {
-            font-family: 'Geist Mono', monospace;
-            font-size: 12px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--accent);
-            margin-bottom: 14px;
-        }
-
-        .section-title {
-            font-size: clamp(32px, 5vw, 46px);
-            font-weight: 500;
-            letter-spacing: -0.03em;
-        }
-
-        /* Projects Section */
-        .projects-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .project-card {
-            position: relative; /* anchors the lens overlays injected by JS */
-            padding: 30px 32px 32px;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
-        }
-
-        .project-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--glass-border-bright);
-            background: linear-gradient(165deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.07));
-        }
-
-        .project-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 16px;
-            margin-bottom: 14px;
-        }
-
-        .project-tags {
-            font-family: 'Geist Mono', monospace;
-            font-size: 11.5px;
-            letter-spacing: 0.04em;
-            color: var(--text-muted);
-        }
-
-        .project-tags .dot {
-            margin: 0 7px;
-            opacity: 0.5;
-        }
-
-        .project-link {
-            color: var(--text-muted);
-            transition: color 0.2s ease, transform 0.2s ease;
-            flex-shrink: 0;
-            display: inline-flex;
-        }
-
-        .project-card:hover .project-link {
-            color: var(--accent);
-        }
-
-        .project-link:hover {
-            transform: translate(2px, -2px);
-        }
-
-        .project-link svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .project-card h3 {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            font-size: 21px;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-            margin-bottom: 10px;
-        }
-
-        .project-icon {
-            display: inline-flex;
-            flex-shrink: 0;
-            color: var(--text-muted);
-            transition: color 0.3s ease;
-        }
-
-        .project-icon svg {
-            width: 21px;
-            height: 21px;
-        }
-
-        .project-card:hover .project-icon {
-            color: var(--accent);
-        }
-
-        .project-card h3 a {
-            color: inherit;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .project-card h3 a:hover {
-            color: var(--accent);
-        }
-
-        .project-card p {
-            color: var(--text-secondary);
-            font-size: 15px;
-            line-height: 1.65;
-        }
-
-        /* Resume Section */
-        .resume-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 48px;
-            align-items: start;
-        }
-
-        .resume-info p {
-            color: var(--text-secondary);
-            margin: 20px 0 28px;
-            max-width: 360px;
-        }
-
-        .resume-frame {
-            overflow: hidden;
-            position: relative;
-            aspect-ratio: 8.5/11;
-            max-height: 900px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .resume-toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--glass-border);
-            flex: 0 0 auto;
-        }
-
-        .resume-status {
-            font-family: 'Geist Mono', monospace;
-            color: var(--text-secondary);
-            font-size: 12.5px;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .resume-controls {
-            display: flex;
-            gap: 8px;
-            flex: 0 0 auto;
-        }
-
-        .resume-control {
-            width: 34px;
-            height: 34px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--glass-border);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: background 0.2s ease, border-color 0.2s ease;
-        }
-
-        .resume-control:hover {
-            background: rgba(255, 255, 255, 0.10);
-            border-color: var(--glass-border-bright);
-        }
-
-        .resume-control svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .resume-pages {
-            flex: 1 1 auto;
-            overflow: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 18px;
-            padding: 20px;
-            background: rgba(3, 4, 12, 0.35);
-        }
-
-        .resume-page {
-            width: 100%;
-            max-width: 100%;
-            background: #fff;
-            border-radius: 4px;
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-        }
-
-        .resume-page canvas {
             display: block;
-            width: 100%;
-            height: auto;
-            border-radius: 4px;
         }
 
-        .resume-loading {
-            color: var(--text-secondary);
-            margin: auto;
-            padding: 32px;
-            text-align: center;
+        #limb[hidden] { display: none; }
+
+        .launch-copy {
+            position: relative;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 17vh 40px 0;
         }
 
-        .resume-loading a {
-            color: var(--accent);
+        h1 {
+            font-size: clamp(56px, 9.6vw, 148px);
+            font-weight: 500;
+            line-height: 0.98;
+            letter-spacing: -0.05em;
+            margin-left: -0.05em;
         }
 
-        /* Footer */
-        footer {
-            padding: 44px 0 52px;
+        .lede {
+            max-width: 30em;
+            margin-top: 32px;
+            font-size: clamp(17px, 1.5vw, 20px);
+            color: var(--dim);
         }
 
-        footer .container {
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            padding-top: 36px;
-        }
-
-        .footer-content {
+        .launch-links {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 28px;
+            margin-top: 36px;
+            font-size: 15px;
+            font-weight: 500;
         }
 
-        .footer-text {
-            font-family: 'Geist Mono', monospace;
-            font-size: 12.5px;
-            color: var(--text-muted);
+        .launch-links a {
+            color: var(--text);
+            border-bottom: 1px solid rgba(232, 235, 241, 0.25);
+            padding-bottom: 2px;
+            transition: color 0.2s ease, border-color 0.2s ease;
         }
 
-        .footer-links {
-            display: flex;
+        .launch-links a:hover { color: var(--air); border-color: var(--air); }
+
+        /* Content */
+        main {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        section {
+            display: grid;
+            grid-template-columns: 3fr 9fr;
+            gap: 40px;
+            padding: 120px 0;
+            border-top: 1px solid var(--rule);
+            scroll-margin-top: 0;
+        }
+
+        section:first-child { border-top: 0; padding-top: 40px; }
+
+        h2 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--dim);
+            letter-spacing: -0.005em;
+        }
+
+        .projects {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 56px 48px;
+        }
+
+        .projects h3 {
+            font-size: 21px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+        }
+
+        .projects h3 a { transition: color 0.2s ease; }
+        .projects h3 a:hover { color: var(--air); }
+
+        .stack {
+            display: block;
+            margin-top: 4px;
+            font-size: 14px;
+            color: var(--faint);
+        }
+
+        .projects p {
+            margin-top: 12px;
+            color: var(--dim);
+            max-width: 34em;
+        }
+
+        .roles { list-style: none; }
+
+        .roles li {
+            display: grid;
+            grid-template-columns: 8.5em 1fr;
             gap: 24px;
+            padding: 26px 0;
+            border-top: 1px solid var(--rule);
         }
 
-        .footer-links a {
-            color: var(--text-secondary);
+        .roles li:first-child { border-top: 0; padding-top: 0; }
+
+        .roles time {
+            color: var(--faint);
+            font-size: 15px;
+            padding-top: 3px;
+        }
+
+        .roles h3 {
+            font-size: 19px;
+            font-weight: 500;
+            letter-spacing: -0.015em;
+        }
+
+        .roles .role { color: var(--dim); font-size: 15px; }
+
+        .roles p {
+            margin-top: 10px;
+            color: var(--dim);
+            max-width: 38em;
+        }
+
+        footer {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 120px 40px 64px;
+            border-top: 1px solid var(--rule);
+        }
+
+        .mail {
+            display: inline-block;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            font-size: clamp(34px, 5.6vw, 76px);
+            font-weight: 500;
+            letter-spacing: -0.045em;
+            line-height: 1.05;
             transition: color 0.2s ease;
-            display: inline-flex;
         }
 
-        .footer-links a:hover {
-            color: var(--accent);
+        .mail:hover { color: var(--air); }
+
+        .elsewhere {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 28px;
+            margin-top: 28px;
+            font-size: 15px;
+            color: var(--dim);
         }
 
-        .footer-links svg {
-            width: 20px;
-            height: 20px;
+        .elsewhere a:hover { color: var(--text); }
+
+        .credit {
+            margin-top: 20px;
+            font-size: 13px;
+            color: var(--faint);
         }
 
-        /* Scroll reveal */
-        .fade-in {
-            opacity: 0;
-            transform: translateY(24px);
-            transition: opacity 0.7s ease, transform 0.7s ease;
+        .credit a { text-decoration: underline; text-underline-offset: 2px; }
+        .credit a:hover { color: var(--dim); }
+        .elsewhere .copy { margin-left: auto; color: var(--faint); }
+
+        @media (max-width: 860px) {
+            section { grid-template-columns: 1fr; gap: 28px; padding: 88px 0; }
+            .projects { grid-template-columns: 1fr; gap: 40px; }
         }
 
-        .fade-in.visible {
-            opacity: 1;
-            transform: translateY(0);
+        @media (max-width: 560px) {
+            .launch-copy, main, footer { padding-left: 20px; padding-right: 20px; }
+            .launch-copy { padding-top: 14vh; }
+            .roles li { grid-template-columns: 1fr; gap: 6px; }
+            .elsewhere .copy { margin-left: 0; width: 100%; }
         }
 
-        /* Reduced motion */
         @media (prefers-reduced-motion: reduce) {
-            html {
-                scroll-behavior: auto;
-            }
-
-            .hero-label,
-            .hero h1,
-            .hero-desc,
-            .hero-actions {
-                animation: none;
-                opacity: 1;
-            }
-
-            .fade-in {
-                opacity: 1;
-                transform: none;
-                transition: none;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            .resume-wrapper {
-                grid-template-columns: 1fr;
-            }
-
-            .resume-frame {
-                max-height: 650px;
-            }
-
-            .projects-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 600px) {
-            nav {
-                gap: 8px;
-                padding: 8px 8px 8px 16px;
-                max-width: calc(100vw - 24px);
-            }
-
-            .logo {
-                font-size: 13px;
-            }
-
-            .nav-links a {
-                font-size: 12.5px;
-                padding: 6px 10px;
-            }
-
-            .hero {
-                padding-top: 130px;
-            }
-
-            .hero-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .btn {
-                justify-content: center;
-            }
-
-            section {
-                padding: 72px 0;
-            }
-
-            .resume-toolbar {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .resume-controls {
-                width: 100%;
-                justify-content: flex-end;
-            }
-
-            .footer-content {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
+            .launch { height: auto; }
         }
     </style>
 </head>
 <body>
-    <div class="nebula" aria-hidden="true"></div>
-    <canvas id="star-canvas"></canvas>
-
-    <!-- Filter host for liquid-glass refraction (populated by JS in Chromium) -->
-    <svg id="lens-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs></defs></svg>
-
-    <!-- Navigation -->
-    <nav>
-        <a href="#" class="logo">Adin Schmidt</a>
-        <div class="nav-links">
-            <a href="#projects">Projects</a>
-            <a href="#resume">Resume</a>
-            <a href="https://github.com/adinschmidt" target="_blank" rel="noopener">GitHub</a>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="hero-label">Software Developer</div>
+    <header class="launch">
+        <div class="launch-pin">
+            <canvas id="limb" aria-hidden="true"></canvas>
+            <div class="launch-copy">
                 <h1>Adin Schmidt</h1>
-                <p class="hero-desc">
-                    I build developer tools, CLI utilities, and browser extensions
-                    that make workflows faster and data more accessible.
+                <p class="lede">
+                    Software engineer in Waterloo, Ontario. I build backend services,
+                    AI infrastructure, and developer tools.
                 </p>
-                <div class="hero-actions">
-                    <a href="#projects" class="btn btn-primary">
-                        <span>View projects</span>
-                    </a>
-                    <a href="#resume" class="btn btn-glass">
-                        <span>Resume</span>
-                    </a>
-                    <a href="https://github.com/adinschmidt" target="_blank" rel="noopener" class="btn btn-glass">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-                        </svg>
-                        <span>GitHub</span>
-                    </a>
-                </div>
+                <nav class="launch-links" aria-label="Sections">
+                    <a href="#projects">Projects</a>
+                    <a href="#experience">Experience</a>
+                    <a href="assets/resume.pdf">Résumé</a>
+                    <a href="https://github.com/adinschmidt" rel="noopener">GitHub</a>
+                </nav>
             </div>
         </div>
-    </section>
+    </header>
 
-    <!-- Projects Section -->
-    <section id="projects">
-        <div class="container">
-            <div class="section-header fade-in">
-                <div class="section-label">Featured Work</div>
-                <h2 class="section-title">Projects</h2>
-            </div>
+    <main>
+        <section id="projects">
+            <h2>Projects</h2>
+            <ul class="projects">
+                <li>
+                    <h3><a href="https://github.com/CivicTechWR/affordable-housing-portal" rel="noopener">Affordable Housing Portal</a></h3>
+                    <span class="stack">TypeScript, Next.js, PostgreSQL</span>
+                    <p>One place for people in Waterloo Region to find and apply for affordable housing, with a partner portal for property managers. Built on Bloom Housing with Civic Tech Waterloo Region.</p>
+                </li>
+                <li>
+                    <h3><a href="https://adinschmidt.com/AI-translator/" rel="noopener">AI Translator</a></h3>
+                    <span class="stack">Browser extension, Manifest V3</span>
+                    <p>Translates selected text or whole pages with the model provider you choose. Custom base URLs and prompts. Published for Chrome and Firefox.</p>
+                </li>
+                <li>
+                    <h3><a href="https://github.com/adinschmidt/mcps" rel="noopener">MCP Servers</a></h3>
+                    <span class="stack">TypeScript, Bun</span>
+                    <p>Model Context Protocol servers for Fastmail mail, calendar, and contacts, and for all 27 Splitwise API operations.</p>
+                </li>
+                <li>
+                    <h3><a href="https://github.com/adinschmidt/spc-converter" rel="noopener">SPC Converter</a></h3>
+                    <span class="stack">Rust CLI</span>
+                    <p>Turns proprietary .spc spectroscopy files into JSON and CSV, with wavelength or Raman shift axes and optional PNG plots.</p>
+                </li>
+                <li>
+                    <h3><a href="https://github.com/adinschmidt/autorun" rel="noopener">Autorun</a></h3>
+                    <span class="stack">Go</span>
+                    <p>A browser UI for launchd and systemd services. Ships as a single static binary.</p>
+                </li>
+                <li>
+                    <h3><a href="https://github.com/adinschmidt/safe-recall" rel="noopener">SafeRecall</a></h3>
+                    <span class="stack">Rust CLI</span>
+                    <p>Runs OCR over your photos and lets you search the text. Built-in OCR, a local SQLite index, and one static binary.</p>
+                </li>
+            </ul>
+        </section>
 
-            <div class="projects-grid">
-                <!-- Affordable Housing Portal -->
-                <article class="project-card glass fade-in">
-                    <div class="project-top">
-                        <span class="project-tags">TypeScript<span class="dot">·</span>Next.js<span class="dot">·</span>CivicTech</span>
-                        <a href="https://github.com/CivicTechWR/affordable-housing-portal" target="_blank" rel="noopener" class="project-link" aria-label="Affordable Housing Portal on GitHub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
-                        </a>
+        <section id="experience">
+            <h2>Experience</h2>
+            <ol class="roles">
+                <li>
+                    <time>2025–now</time>
+                    <div>
+                        <h3>Civic Tech Waterloo Region</h3>
+                        <div class="role">Volunteer technical lead</div>
+                        <p>Leading development of the Affordable Housing Portal and mentoring the students and junior developers who build it.</p>
                     </div>
-                    <h3>
-                        <span class="project-icon" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                            </svg>
-                        </span>
-                        <a href="https://github.com/CivicTechWR/affordable-housing-portal" target="_blank" rel="noopener">Affordable Housing Portal</a>
-                    </h3>
-                    <p>
-                        An affordable housing platform built on Bloom Housing for the Waterloo Region.
-                        A single entry point for housing seekers to browse and apply for available listings,
-                        with a partner portal for property managers.
-                    </p>
-                </article>
-
-                <!-- AI Translator -->
-                <article class="project-card glass fade-in">
-                    <div class="project-top">
-                        <span class="project-tags">Browser Extension<span class="dot">·</span>Manifest V3<span class="dot">·</span>Tailwind</span>
-                        <a href="https://github.com/adinschmidt/AI-translator" target="_blank" rel="noopener" class="project-link" aria-label="AI Translator on GitHub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
-                        </a>
+                </li>
+                <li>
+                    <time>2025–2026</time>
+                    <div>
+                        <h3>Hypotenuse Labs</h3>
+                        <div class="role">Software developer, contract</div>
+                        <p>Built a Discord agent with persistent memory, sandboxed execution, and routing across model providers. Wrote the OpenAI-compatible LLM proxy that carried over $100k of token usage, with quotas, priority queues, and repair for inconsistent provider APIs.</p>
                     </div>
-                    <h3>
-                        <span class="project-icon" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" />
-                            </svg>
-                        </span>
-                        <a href="https://adinschmidt.com/AI-translator/" target="_blank" rel="noopener">AI Translator</a>
-                    </h3>
-                    <p>
-                        A browser extension leveraging AI models for superior text and page translations.
-                        Delivers more natural, context-aware results than traditional machine translation
-                        with customizable model settings.
-                    </p>
-                </article>
-
-                <!-- MCP Servers -->
-                <article class="project-card glass fade-in">
-                    <div class="project-top">
-                        <span class="project-tags">TypeScript<span class="dot">·</span>MCP<span class="dot">·</span>Bun</span>
-                        <a href="https://github.com/adinschmidt/mcps" target="_blank" rel="noopener" class="project-link" aria-label="MCP Servers on GitHub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
-                        </a>
+                </li>
+                <li>
+                    <time>2021–2024</time>
+                    <div>
+                        <h3>Sandvine</h3>
+                        <div class="role">Backend software developer</div>
+                        <p>Lead developer and product owner of the Alert Engine, which runs statistical and ML classifiers over terabytes of network telemetry every five minutes. Ran sprints for a team of eight and shipped three major releases on time.</p>
                     </div>
-                    <h3>
-                        <span class="project-icon" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
-                            </svg>
-                        </span>
-                        <a href="https://github.com/adinschmidt/mcps" target="_blank" rel="noopener">MCP Servers</a>
-                    </h3>
-                    <p>
-                        A collection of Model Context Protocol servers for AI tool integration.
-                        Includes Fastmail (mail, calendar, contacts) and Splitwise (all 27 API endpoints) connectors.
-                    </p>
-                </article>
-
-                <!-- SPC Converter -->
-                <article class="project-card glass fade-in">
-                    <div class="project-top">
-                        <span class="project-tags">Rust<span class="dot">·</span>CLI<span class="dot">·</span>Spectroscopy</span>
-                        <a href="https://github.com/adinschmidt/spc-converter" target="_blank" rel="noopener" class="project-link" aria-label="SPC Converter on GitHub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
-                        </a>
+                </li>
+                <li>
+                    <time>2020</time>
+                    <div>
+                        <h3>Tesla</h3>
+                        <div class="role">Embedded software engineer, co-op</div>
+                        <p>Supercharger team. Embedded C and CAN definitions for messages between vehicles and charger components.</p>
                     </div>
-                    <h3>
-                        <span class="project-icon" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                            </svg>
-                        </span>
-                        <a href="https://github.com/adinschmidt/spc-converter" target="_blank" rel="noopener">SPC Converter</a>
-                    </h3>
-                    <p>
-                        Convert proprietary .spc spectral files into open formats like JSON and CSV.
-                        Extracts intensity data, calibration settings, and generates wavelength/Raman
-                        shift axes with optional PNG visualizations.
-                    </p>
-                </article>
-
-                <!-- Autorun -->
-                <article class="project-card glass fade-in">
-                    <div class="project-top">
-                        <span class="project-tags">Go<span class="dot">·</span>Web UI<span class="dot">·</span>Services</span>
-                        <a href="https://github.com/adinschmidt/autorun" target="_blank" rel="noopener" class="project-link" aria-label="Autorun on GitHub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
-                        </a>
+                </li>
+                <li>
+                    <time>2019</time>
+                    <div>
+                        <h3>Inscopix</h3>
+                        <div class="role">Software engineer, co-op</div>
+                        <p>Sole developer of a 3D cell detection workflow for neuroimaging video, shown at Society for Neuroscience 2019.</p>
                     </div>
-                    <h3>
-                        <span class="project-icon" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                            </svg>
-                        </span>
-                        <a href="https://github.com/adinschmidt/autorun" target="_blank" rel="noopener">Autorun</a>
-                    </h3>
-                    <p>
-                        A lightweight web UI for managing system services without command-line complexity.
-                        Control launchd (macOS) or systemd (Linux) from your browser with a single static binary.
-                    </p>
-                </article>
-
-                <!-- SafeRecall -->
-                <article class="project-card glass fade-in">
-                    <div class="project-top">
-                        <span class="project-tags">Rust<span class="dot">·</span>CLI<span class="dot">·</span>OCR</span>
-                        <a href="https://github.com/adinschmidt/safe-recall" target="_blank" rel="noopener" class="project-link" aria-label="SafeRecall on GitHub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
-                        </a>
+                </li>
+                <li>
+                    <time>2017–2019</time>
+                    <div>
+                        <h3>Dejero, McAfee, SAP</h3>
+                        <div class="role">Co-op terms</div>
+                        <p>Multithreaded DNS in C++ for the Dejero GateWay, plus test automation and QA tooling.</p>
                     </div>
-                    <h3>
-                        <span class="project-icon" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </span>
-                        <a href="https://github.com/adinschmidt/safe-recall" target="_blank" rel="noopener">SafeRecall</a>
-                    </h3>
-                    <p>
-                        A CLI tool to OCR and search for text in your photos. Features built-in OCR
-                        with no external dependencies, fast search via local SQLite, and compiles
-                        to a single static binary.
-                    </p>
-                </article>
-            </div>
-        </div>
-    </section>
-
-    <!-- Resume Section -->
-    <section id="resume">
-        <div class="container">
-            <div class="resume-wrapper">
-                <div class="resume-info fade-in">
-                    <div class="section-label">Background</div>
-                    <h2 class="section-title">Resume</h2>
-                    <p>
-                        View my full resume for details on my experience,
-                        skills, and background.
-                    </p>
-                    <a href="assets/resume.pdf" target="_blank" class="btn btn-primary">
-                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <line x1="10" y1="14" x2="21" y2="3"></line>
-                        </svg>
-                        <span>Open full resume</span>
-                    </a>
-                </div>
-                <div class="resume-frame glass fade-in">
-                    <div class="resume-toolbar">
-                        <div class="resume-status" id="resume-status">Loading resume...</div>
-                        <div class="resume-controls" aria-label="Resume controls">
-                            <button class="resume-control" type="button" id="resume-zoom-out" aria-label="Zoom out" title="Zoom out">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                    <path d="M5 12h14"></path>
-                                </svg>
-                            </button>
-                            <button class="resume-control" type="button" id="resume-zoom-in" aria-label="Zoom in" title="Zoom in">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                    <path d="M12 5v14"></path>
-                                    <path d="M5 12h14"></path>
-                                </svg>
-                            </button>
-                            <a class="resume-control" href="assets/resume.pdf" target="_blank" aria-label="Open resume PDF" title="Open resume PDF">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                    <path d="M15 3h6v6"></path>
-                                    <path d="M10 14 21 3"></path>
-                                </svg>
-                            </a>
-                            <a class="resume-control" href="assets/resume.pdf" download aria-label="Download resume PDF" title="Download resume PDF">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <path d="M7 10l5 5 5-5"></path>
-                                    <path d="M12 15V3"></path>
-                                </svg>
-                            </a>
-                        </div>
+                </li>
+                <li>
+                    <time>2015–2020</time>
+                    <div>
+                        <h3>University of Waterloo</h3>
+                        <div class="role">Bachelor of Computer Science, Honours Co-op</div>
                     </div>
-                    <div class="resume-pages" id="resume-pages">
-                        <div class="resume-loading">Loading resume...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+                </li>
+            </ol>
+        </section>
+    </main>
 
-    <!-- Footer -->
     <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-text">
-                    &copy; 2026 Adin Schmidt
-                </div>
-                <div class="footer-links">
-                    <a href="https://github.com/adinschmidt" target="_blank" rel="noopener" aria-label="GitHub">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                    </a>
-                </div>
-            </div>
+        <a class="mail" href="mailto:me@adinschmidt.com">me@adinschmidt.com</a>
+        <div class="elsewhere">
+            <a href="https://github.com/adinschmidt" rel="noopener">GitHub</a>
+            <a href="https://www.linkedin.com/in/adinschmidt" rel="noopener">LinkedIn</a>
+            <a href="assets/resume.pdf">Résumé (PDF)</a>
+            <span class="copy">© 2026 Adin Schmidt</span>
         </div>
+        <p class="credit">Earth textures by <a href="https://www.solarsystemscope.com/textures/" rel="noopener">Solar System Scope</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>.</p>
     </footer>
 
-    <!-- Three.js Star Field Background -->
-    <script>
-        (function() {
-            // Check if mobile/touch device - skip stars for performance
-            if (window.matchMedia('(pointer: coarse)').matches) return;
-
-            const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-            let prefersReducedMotion = reducedMotionQuery.matches;
-
-            const canvas = document.getElementById('star-canvas');
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false });
-
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            // Cap the render buffer at 1.5x: the stars are soft glow sprites,
-            // so the upscale on 2x displays is invisible but the full-screen
-            // fill cost drops by ~44%
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-            renderer.setClearColor(0x000000, 0);
-
-            // Create circular texture for soft round stars
-            function createStarTexture() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 64;
-                canvas.height = 64;
-                const ctx = canvas.getContext('2d');
-
-                // Tight bright core with wide soft glow
-                const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                gradient.addColorStop(0.08, 'rgba(255, 255, 255, 0.95)');
-                gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.5)');
-                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
-                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 64, 64);
-
-                return new THREE.CanvasTexture(canvas);
-            }
-
-            const starTexture = createStarTexture();
-
-            // Generate star positions spread in X/Y, distributed along Z depth
-            // Stars span from zFar (behind) to zNear (in front of camera)
-            const zNear = -5;   // stars recycle before reaching camera
-            const zFar = -120;  // far end of the tunnel
-            function generatePositions(count, spreadXY) {
-                const positions = new Float32Array(count * 3);
-                for (let i = 0; i < count; i++) {
-                    positions[i * 3]     = (Math.random() - 0.5) * spreadXY;
-                    positions[i * 3 + 1] = (Math.random() - 0.5) * spreadXY;
-                    positions[i * 3 + 2] = zFar + Math.random() * (zNear - zFar);
-                }
-                return positions;
-            }
-
-            // Resolution-independent scaling
-            // Reference: 1080p screen. Sizes and counts scale so stars
-            // look the same on 720p, 1080p, 1440p, and 4K displays.
-            const refHeight = 1080;
-            const screenH = window.innerHeight * window.devicePixelRatio;
-            const sizeScale = screenH / refHeight;
-            const countScale = (window.innerWidth * window.innerHeight) / (1920 * 1080);
-
-            // Star layers — realistic blackbody star colors
-            // Blue-white (hot) → pure white → yellow-white → warm amber (cool)
-            // speed: Z units per second each star moves towards camera
-            // Sizes are authored for 1080p and scaled up for higher resolutions
-            const starLayers = [
-                // --- Slow background (distant, dim) ---
-                { count: 90, size: 0.14, color: '#e8e8f0', opacity: 0.25, spreadXY: 80, speed: 0.17 },
-                { count: 50, size: 0.14, color: '#ffe0b8', opacity: 0.2, spreadXY: 80, speed: 0.20 },
-                // --- Mid layer ---
-                { count: 30, size: 0.26, color: '#d4dfff', opacity: 0.45, spreadXY: 65, speed: 0.42 },
-                { count: 60, size: 0.22, color: '#f0f0ff', opacity: 0.5, spreadXY: 65, speed: 0.47 },
-                { count: 40, size: 0.20, color: '#ffe8c8', opacity: 0.4, spreadXY: 60, speed: 0.50 },
-                // --- Fast foreground (brighter, closer) ---
-                { count: 12, size: 0.45, color: '#cad8ff', opacity: 0.7, spreadXY: 50, speed: 0.83 },
-                { count: 25, size: 0.34, color: '#fff4e8', opacity: 0.6, spreadXY: 50, speed: 0.92 },
-                { count: 15, size: 0.28, color: '#ffd9a0', opacity: 0.4, spreadXY: 45, speed: 0.75 },
-            ];
-
-            const allMeshes = [];
-            // Star drift runs on the GPU: the vertex shader loops each star's
-            // z from zFar towards zNear as uTime advances, so position
-            // buffers are uploaded once and never touched again.
-            const timeUniform = { value: 0 };
-            const zRange = (zNear - zFar).toFixed(1);
-            starLayers.forEach((layer) => {
-                const scaledCount = Math.round(layer.count * Math.max(countScale, 1));
-                const geo = new THREE.BufferGeometry();
-                const pos = generatePositions(scaledCount, layer.spreadXY);
-                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                const mat = new THREE.PointsMaterial({
-                    size: layer.size * sizeScale,
-                    color: layer.color,
-                    transparent: true,
-                    opacity: layer.opacity,
-                    map: starTexture,
-                    alphaTest: 0.001,
-                    sizeAttenuation: true,
-                    depthWrite: false,
-                    blending: THREE.AdditiveBlending,
-                });
-                mat.onBeforeCompile = (shader) => {
-                    shader.uniforms.uTime = timeUniform;
-                    shader.uniforms.uSpeed = { value: layer.speed };
-                    shader.vertexShader = shader.vertexShader
-                        .replace('void main() {', 'uniform float uTime;\nuniform float uSpeed;\nvarying float vFade;\nvoid main() {')
-                        .replace(
-                            '#include <begin_vertex>',
-                            '#include <begin_vertex>\n' +
-                            'transformed.z = ' + zFar.toFixed(1) + ' + mod( transformed.z - (' + zFar.toFixed(1) + ') + uSpeed * uTime, ' + zRange + ' );'
-                        )
-                        .replace(
-                            '#include <project_vertex>',
-                            '#include <project_vertex>\n' +
-                            // Stars recycle at zNear while still inside the
-                            // frustum, and point sprites are culled the moment
-                            // their center leaves the screen — both read as
-                            // stars popping out of existence. Fade over the
-                            // last few units of depth and in a thin border
-                            // band so every exit is gradual instead.
-                            'vFade = smoothstep( ' + (-zNear).toFixed(1) + ', ' + (-zNear + 5).toFixed(1) + ', -transformed.z );\n' +
-                            'vec2 edgeNdc = abs( gl_Position.xy / gl_Position.w );\n' +
-                            'vFade *= 1.0 - smoothstep( 0.92, 1.0, max( edgeNdc.x, edgeNdc.y ) );'
-                        );
-                    shader.fragmentShader = shader.fragmentShader
-                        .replace('void main() {', 'varying float vFade;\nvoid main() {')
-                        .replace(
-                            'vec4 diffuseColor = vec4( diffuse, opacity );',
-                            'vec4 diffuseColor = vec4( diffuse, opacity * vFade );'
-                        );
-                };
-                const mesh = new THREE.Points(geo, mat);
-                scene.add(mesh);
-                allMeshes.push({ mesh, mat, baseOpacity: layer.opacity, baseSize: layer.size });
-            });
-
-            camera.position.z = 0;
-
-            const frameInterval = 1000 / 30;
-            let animationFrameId = null;
-            let isAnimating = false;
-            let lastFrameTime = 0;
-            let previousRenderTime = 0;
-            let elapsedTime = 0;
-
-            function renderScene(now) {
-                if (previousRenderTime === 0) {
-                    previousRenderTime = now;
-                }
-
-                const deltaSeconds = (now - previousRenderTime) / 1000;
-                previousRenderTime = now;
-
-                if (!prefersReducedMotion) {
-                    elapsedTime += deltaSeconds;
-                    timeUniform.value = elapsedTime;
-
-                    // Gentle twinkling — slow, subtle opacity flutter
-                    allMeshes.forEach((entry, i) => {
-                        const twinkle = Math.sin(elapsedTime * (0.3 + i * 0.07) + i * 2.3) * 0.04;
-                        entry.mat.opacity = entry.baseOpacity + twinkle;
-                    });
-                }
-
-                renderer.render(scene, camera);
-            }
-
-            function animate(now) {
-                if (!isAnimating) return;
-
-                if (lastFrameTime === 0 || now - lastFrameTime >= frameInterval) {
-                    lastFrameTime = now;
-                    renderScene(now);
-                }
-
-                animationFrameId = requestAnimationFrame(animate);
-            }
-
-            function stopAnimation() {
-                if (!isAnimating) return;
-                isAnimating = false;
-                if (animationFrameId !== null) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                }
-            }
-
-            function startAnimation() {
-                if (isAnimating || prefersReducedMotion || document.hidden) return;
-                isAnimating = true;
-                lastFrameTime = 0;
-                previousRenderTime = 0;
-                animationFrameId = requestAnimationFrame(animate);
-            }
-
-            function handleReducedMotionChange(event) {
-                prefersReducedMotion = event.matches;
-
-                if (prefersReducedMotion) {
-                    stopAnimation();
-                    previousRenderTime = 0;
-                    renderScene(performance.now());
-                } else {
-                    startAnimation();
-                }
-            }
-
-            if (prefersReducedMotion) {
-                renderScene(performance.now());
-            } else {
-                startAnimation();
-            }
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    stopAnimation();
-                } else if (!prefersReducedMotion) {
-                    startAnimation();
-                }
-            });
-
-            if (typeof reducedMotionQuery.addEventListener === 'function') {
-                reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
-            } else if (typeof reducedMotionQuery.addListener === 'function') {
-                reducedMotionQuery.addListener(handleReducedMotionChange);
-            }
-
-            // Handle resize — rescale star sizes to match new resolution
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-                const newScale = (window.innerHeight * window.devicePixelRatio) / refHeight;
-                allMeshes.forEach((entry) => {
-                    entry.mat.size = entry.baseSize * newScale;
-                });
-            });
-
-        })();
-    </script>
-
-    <!-- Liquid-glass refraction: per-element SVG displacement filters.
-         Chromium is the only engine that applies url() filters inside
-         backdrop-filter, so other browsers keep the plain frosted blur. -->
     <script>
         (function () {
-            if (!window.chrome || !CSS.supports('backdrop-filter', 'url(#lens)')) return;
+            const canvas = document.getElementById('limb');
+            const launch = document.querySelector('.launch');
+            const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
+            if (!gl) { canvas.hidden = true; return; }
 
-            const SVG_NS = 'http://www.w3.org/2000/svg';
-            const defs = document.querySelector('#lens-defs defs');
-            const targets = [
-                { el: document.querySelector('nav'), blur: 8 },
-                ...[...document.querySelectorAll('.btn-glass')].map((el) => ({ el, blur: 6 })),
-                ...[...document.querySelectorAll('.project-card')].map((el) => ({ el, blur: 6, split: true })),
-                { el: document.querySelector('.resume-frame'), blur: 6, split: true },
-            ].filter((t) => t.el);
+            const vertex = `
+                attribute vec2 aPos;
+                void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
+            `;
 
-            // Large surfaces split the glass in two layers: the displacement
-            // map is neutral everywhere except the rim band, so the interior
-            // can use a plain blur (which stays on the compositor fast path)
-            // while only a thin masked ring pays for the displacement filter.
-            const RING_MASK = 'linear-gradient(#000 0 0) exclude, linear-gradient(#000 0 0) content-box';
-            const canSplit = CSS.supports('mask', RING_MASK);
+            // Orbital sunrise from 400 km over the night side. Earth is a
+            // sphere and the air around it is ray marched with Rayleigh and
+            // Mie single scattering, so the limb colours, the twilight on the
+            // ground, and the glare all follow from where the sun is. Scroll
+            // raises the sun, which is the same as the orbit carrying the
+            // camera toward the day side. Distances are in Earth radii.
+            // Surface colour, clouds, and the ocean mask come from textures
+            // once they load; until then the ground is a flat dark albedo.
+            const fragment = `
+                precision highp float;
+                uniform vec2 uRes;
+                uniform float uScale;
+                uniform vec3 uCamPos;
+                uniform vec3 uCamRight;
+                uniform vec3 uCamUp;
+                uniform vec3 uCamForward;
+                uniform float uTanHalf;
+                uniform vec3 uSun;
+                uniform float uExposure;
+                uniform float uNight;
+                uniform mat3 uEarth;
+                uniform sampler2D uDay;
+                uniform sampler2D uClouds;
+                uniform sampler2D uOcean;
+                uniform float uTextures;
 
-            // Width of the refracting band along the rim, in element pixels
-            function bandFor(w, h) {
-                return Math.min(Math.min(w, h) * 0.42, 46);
-            }
+                const float PI = 3.14159265;
+                const float RE = 1.0;
+                const float RA = 1.0 + 60.0 / 6360.0;
+                const float HR = 8.0 / 6360.0;
+                const float HM = 1.2 / 6360.0;
+                const vec3 BETA_R = vec3(36.9, 85.9, 210.5);
+                const float BETA_M = 51.0;
+                // Ozone only absorbs; it deepens the blue of the upper limb
+                const vec3 BETA_O = vec3(4.13, 11.96, 0.54) * 0.55;
+                const float MIE_EXT = 1.11;
+                const float G = 0.76;
+                const float SUN = 22.0;
+                const float SUN_RADIUS = 0.008;
+                const float CLOUD_TOP = 10.0 / 6360.0;
+                const int STEPS = 16;
+                const int LIGHT_STEPS = 8;
 
-            // Displacement map for a rounded-rect lens: neutral (no shift) in
-            // the middle, bending outward across a band along the rim.
-            // R encodes X displacement, G encodes Y; 127.5 is neutral.
-            // Maps are cached by size (the six project cards share one) and
-            // generated at half resolution — the field is a smooth gradient,
-            // so feImage upscales it with no visible difference.
-            const MAP_SCALE = 0.5;
-            const mapCache = new Map();
-            function makeMap(w, h, radius) {
-                const key = w + '|' + h + '|' + radius;
-                const cached = mapCache.get(key);
-                if (cached) return cached;
-
-                const mapW = Math.max(2, Math.round(w * MAP_SCALE));
-                const mapH = Math.max(2, Math.round(h * MAP_SCALE));
-                const canvas = document.createElement('canvas');
-                canvas.width = mapW;
-                canvas.height = mapH;
-                const ctx = canvas.getContext('2d');
-                const img = ctx.createImageData(mapW, mapH);
-                const data = img.data;
-                const cx = w / 2, cy = h / 2;
-                const hw = w / 2, hh = h / 2;
-                const r = Math.min(radius, hw, hh);
-                const band = bandFor(w, h);
-
-                // Signed distance to the rounded-rect edge (negative inside)
-                function sdf(px, py) {
-                    const qx = Math.abs(px - cx) - (hw - r);
-                    const qy = Math.abs(py - cy) - (hh - r);
-                    const ox = Math.max(qx, 0), oy = Math.max(qy, 0);
-                    return Math.sqrt(ox * ox + oy * oy) + Math.min(Math.max(qx, qy), 0) - r;
+                float hash(vec2 p) {
+                    p = fract(p * vec2(233.34, 851.73));
+                    p += dot(p, p + 23.45);
+                    return fract(p.x * p.y);
                 }
 
-                for (let y = 0; y < mapH; y++) {
-                    for (let x = 0; x < mapW; x++) {
-                        const px = (x + 0.5) / MAP_SCALE, py = (y + 0.5) / MAP_SCALE;
-                        const d = sdf(px, py);
-                        const t = Math.min(Math.max(1 + d / band, 0), 1);
-                        const fall = t * t * t;
-                        let nx = sdf(px + 1, py) - sdf(px - 1, py);
-                        let ny = sdf(px, py + 1) - sdf(px, py - 1);
-                        const len = Math.hypot(nx, ny) || 1;
-                        nx /= len;
-                        ny /= len;
-                        const i = (y * mapW + x) * 4;
-                        data[i] = Math.round(127.5 + nx * fall * 127.5);
-                        data[i + 1] = Math.round(127.5 + ny * fall * 127.5);
-                        data[i + 2] = 0;
-                        data[i + 3] = 255;
+                // Near and far hits of a sphere at the origin, or (1e9, -1e9)
+                vec2 sphere(vec3 ro, vec3 rd, float r) {
+                    float b = dot(ro, rd);
+                    float h = b * b - dot(ro, ro) + r * r;
+                    if (h < 0.0) return vec2(1e9, -1e9);
+                    h = sqrt(h);
+                    return vec2(-b - h, -b + h);
+                }
+
+                // How much of the sun's disc clears the planet, seen from p
+                float sunVisible(vec3 p) {
+                    float b = dot(p, uSun);
+                    if (b > 0.0) return 1.0;
+                    return smoothstep(-0.0004, 0.0004, length(p - uSun * b) - RE);
+                }
+
+                // Rayleigh, Mie, and ozone density at altitude h. Ozone peaks
+                // in a layer around 25 km.
+                vec3 density(float h) {
+                    h = max(h, 0.0);
+                    return vec3(exp(-h / vec2(HR, HM)), max(1.0 - abs(h * 6360.0 - 25.0) / 15.0, 0.0));
+                }
+
+                vec3 extinction(vec3 depth) {
+                    return BETA_R * depth.x + BETA_M * MIE_EXT * depth.y + BETA_O * depth.z;
+                }
+
+                // Optical depth along a ray, inside the air only
+                vec3 opticalDepth(vec3 ro, vec3 rd) {
+                    vec2 t = sphere(ro, rd, RA);
+                    float t0 = max(t.x, 0.0);
+                    float seg = max(t.y - t0, 0.0) / float(LIGHT_STEPS);
+                    vec3 depth = vec3(0.0);
+                    for (int i = 0; i < LIGHT_STEPS; i++) {
+                        depth += density(length(ro + rd * (t0 + seg * (float(i) + 0.5))) - RE);
                     }
+                    return depth * seg;
                 }
-                ctx.putImageData(img, 0, 0);
-                const url = canvas.toDataURL();
-                mapCache.set(key, url);
-                return url;
-            }
 
-            let uid = 0;
-            const filterCache = new Map();
-
-            // Same-sized elements (all six project cards) share one filter.
-            // Entries persist across rebuilds so elements keep referencing an
-            // already-decoded feImage — swapping in a fresh filter would show
-            // the rim shifted for a moment while the new map decodes.
-            function getFilter(w, h, radius) {
-                const key = w + '|' + h + '|' + radius;
-                let entry = filterCache.get(key);
-                if (entry) return entry;
-
-                const margin = 40;
-                const id = 'lens-' + uid++;
-                const filter = document.createElementNS(SVG_NS, 'filter');
-                filter.setAttribute('id', id);
-                filter.setAttribute('filterUnits', 'userSpaceOnUse');
-                filter.setAttribute('color-interpolation-filters', 'sRGB');
-                filter.setAttribute('x', -margin);
-                filter.setAttribute('y', -margin);
-                filter.setAttribute('width', w + margin * 2);
-                filter.setAttribute('height', h + margin * 2);
-
-                const feImage = document.createElementNS(SVG_NS, 'feImage');
-                feImage.setAttribute('href', makeMap(w, h, radius));
-                feImage.setAttribute('x', 0);
-                feImage.setAttribute('y', 0);
-                feImage.setAttribute('width', w);
-                feImage.setAttribute('height', h);
-                feImage.setAttribute('result', 'map');
-
-                const feDisp = document.createElementNS(SVG_NS, 'feDisplacementMap');
-                feDisp.setAttribute('in', 'SourceGraphic');
-                feDisp.setAttribute('in2', 'map');
-                feDisp.setAttribute('scale', 32);
-                feDisp.setAttribute('xChannelSelector', 'R');
-                feDisp.setAttribute('yChannelSelector', 'G');
-
-                filter.append(feImage, feDisp);
-                defs.appendChild(filter);
-                entry = { key, id, node: filter };
-                filterCache.set(key, entry);
-                return entry;
-            }
-
-            function applyFilter(target) {
-                const rect = target.el.getBoundingClientRect();
-                const w = Math.max(2, Math.round(rect.width));
-                const h = Math.max(2, Math.round(rect.height));
-                const radius = parseFloat(getComputedStyle(target.el).borderTopLeftRadius) || 0;
-                const filter = getFilter(w, h, radius);
-                const chain =
-                    'url(#' + filter.id + ') blur(' + target.blur + 'px) saturate(1.5)';
-                target.filterKey = filter.key;
-
-                if (target.split && canSplit && entranceDone(target)) {
-                    applySplit(target, w, h, chain);
-                } else {
-                    target.el.style.backdropFilter = chain;
+                vec3 sunlightAt(vec3 p) {
+                    float vis = sunVisible(p);
+                    if (vis <= 0.0) return vec3(0.0);
+                    return exp(-extinction(opticalDepth(p, uSun))) * vis;
                 }
-            }
 
-            // The scroll reveal fades elements in through an opacity
-            // transition, and an ancestor with opacity below 1 becomes its
-            // children's backdrop root — the split overlays would see only
-            // the card's own background instead of the page while it fades,
-            // then snap to frosted once the transition ends. So an element
-            // keeps the (visually identical) single-element filter until its
-            // entrance settles, then switches to the cheaper overlays.
-            function entranceDone(target) {
-                if (target.settled) return true;
-                if (!target.el.classList.contains('fade-in')) {
-                    target.settled = true;
-                    return true;
+                // Filmic curve (Narkowicz's ACES fit): keeps space black and
+                // rolls the sun off to white instead of clipping it
+                vec3 filmic(vec3 x) {
+                    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
                 }
-                watchEntrance(target);
-                return false;
-            }
 
-            function watchEntrance(target) {
-                if (target.watching) return;
-                target.watching = true;
-                const settle = () => {
-                    setTimeout(() => {
-                        target.settled = true;
-                        applyFilter(target);
-                    }, 800);
-                };
-                if (target.el.classList.contains('visible')) {
-                    settle();
-                    return;
-                }
-                const observer = new MutationObserver(() => {
-                    if (!target.el.classList.contains('visible')) return;
-                    observer.disconnect();
-                    settle();
-                });
-                observer.observe(target.el, { attributes: true, attributeFilter: ['class'] });
-            }
+                void main() {
+                    vec2 frag = gl_FragCoord.xy;
+                    vec2 p = (frag - 0.5 * uRes) / uRes.y;
+                    vec3 ro = uCamPos;
+                    vec3 rd = normalize(uCamForward + (p.x * uCamRight + p.y * uCamUp) * 2.0 * uTanHalf);
 
-            // The overlays sit at z-index -1: below the element's content but
-            // (when the element is a stacking context) above its background,
-            // so their backdrop is the page behind the glass plus at most the
-            // element's own near-uniform gradient — the same input the
-            // single-element filter sees. The ring is inset 1px so the crisp
-            // border always stays on top, and the interior tucks 1px under
-            // the ring so no seam can open between the two.
-            function applySplit(target, w, h, chain) {
-                const band = Math.ceil(bandFor(w, h)) + 'px';
-                target.el.style.backdropFilter = 'none';
+                    vec2 tEarth = sphere(ro, rd, RE);
+                    bool ground = tEarth.x > 0.0 && tEarth.x < 1e8;
+                    vec2 tAir = sphere(ro, rd, RA);
 
-                if (!target.ring) {
-                    target.interior = document.createElement('div');
-                    target.ring = document.createElement('div');
-                    [target.interior, target.ring].forEach((overlay) => {
-                        overlay.setAttribute('aria-hidden', 'true');
-                        overlay.style.position = 'absolute';
-                        overlay.style.zIndex = '-1';
-                        overlay.style.pointerEvents = 'none';
-                    });
-                    target.ring.style.inset = '1px';
-                    target.ring.style.borderRadius = 'inherit';
-                    target.ring.style.mask = RING_MASK;
-                    target.el.prepend(target.interior, target.ring);
-                }
-                target.interior.style.inset = band;
-                target.interior.style.backdropFilter =
-                    'blur(' + target.blur + 'px) saturate(1.5)';
-                target.ring.style.padding = band;
-                target.ring.style.backdropFilter = chain;
-            }
+                    // Texture lookups run for every pixel so their derivatives
+                    // stay continuous across the limb; sky pixels ignore them
+                    vec3 q = ro + rd * (ground ? tEarth.x : max(-dot(ro, rd), 0.0));
+                    vec3 n = normalize(q);
+                    vec3 geo = uEarth * n;
+                    vec2 uv = vec2(atan(-geo.z, geo.x) / (2.0 * PI) + 0.5, acos(clamp(geo.y, -1.0, 1.0)) / PI);
+                    vec3 dayTex = texture2D(uDay, uv).rgb;
+                    float cloudTex = texture2D(uClouds, uv).r;
+                    float oceanTex = texture2D(uOcean, uv).r;
 
-            let lastSizes = '';
-            function rebuild() {
-                // Skip when no element changed size (e.g. fonts.ready firing
-                // after the fonts were already in place for the first build)
-                const sizes = targets.map((t) => {
-                    const rect = t.el.getBoundingClientRect();
-                    return Math.round(rect.width) + 'x' + Math.round(rect.height);
-                }).join('|');
-                if (sizes === lastSizes) return;
-                lastSizes = sizes;
+                    vec3 col = vec3(0.0);
+                    vec3 trans = vec3(1.0);
 
-                targets.forEach(applyFilter);
-
-                // Drop filters no longer referenced by any element
-                const used = new Set(targets.map((t) => t.filterKey));
-                filterCache.forEach((entry, key) => {
-                    if (!used.has(key)) {
-                        entry.node.remove();
-                        filterCache.delete(key);
+                    if (tAir.y > 0.0) {
+                        float t0 = max(tAir.x, 0.0);
+                        float t1 = ground ? tEarth.x : tAir.y;
+                        float seg = (t1 - t0) / float(STEPS);
+                        vec3 depth = vec3(0.0);
+                        vec3 sumR = vec3(0.0);
+                        vec3 sumM = vec3(0.0);
+                        for (int i = 0; i < STEPS; i++) {
+                            vec3 s = ro + rd * (t0 + seg * (float(i) + 0.5));
+                            vec3 dens = density(length(s) - RE) * seg;
+                            depth += dens * 0.5;
+                            float vis = sunVisible(s);
+                            if (vis > 0.0) {
+                                vec3 att = exp(-extinction(depth + opticalDepth(s, uSun))) * vis;
+                                sumR += dens.x * att;
+                                sumM += dens.y * att;
+                            }
+                            depth += dens * 0.5;
+                        }
+                        float mu = dot(rd, uSun);
+                        float g2 = G * G;
+                        float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu);
+                        float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + mu * mu))
+                            / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * G * mu, 1.5));
+                        col = SUN * (sumR * BETA_R * phaseR + sumM * BETA_M * phaseM);
+                        trans = exp(-extinction(depth));
                     }
-                });
-            }
 
-            rebuild();
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(rebuild);
-            }
+                    if (ground) {
+                        float ndl = dot(n, uSun);
+                        vec3 albedo = mix(vec3(0.045, 0.07, 0.1), pow(dayTex, vec3(2.2)) * 0.8, uTextures);
+                        float cloud = cloudTex * uTextures;
+                        float ocean = mix(1.0, oceanTex, uTextures) * (1.0 - cloud);
 
-            let resizeTimer = null;
-            window.addEventListener('resize', () => {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(rebuild, 250);
-            });
-        })();
-    </script>
+                        vec3 sunGround = sunlightAt(q);
+                        vec3 lit = albedo * max(ndl, 0.0);
+                        // Sun glint: a tight highlight on open water, brighter
+                        // at grazing angles where water turns mirror-like
+                        vec3 halfway = normalize(uSun - rd);
+                        float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(n, -rd), 0.0), 5.0);
+                        lit += vec3(1.0) * pow(max(dot(n, halfway), 0.0), 300.0) * 40.0 * fresnel * ocean * step(0.0, ndl);
+                        lit *= sunGround;
 
-    <script type="module">
-        import * as pdfjsLib from './assets/pdfjs/pdf.mjs';
+                        // Cloud tops sit 10 km up, so they catch the sun a
+                        // little before the ground below them does
+                        vec3 sunCloud = sunlightAt(n * (RE + CLOUD_TOP));
+                        vec3 cloudLit = vec3(0.9) * sunCloud * max(ndl + 0.056, 0.0) / 1.056;
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.mjs';
-
-        const resumePages = document.getElementById('resume-pages');
-        const resumeStatus = document.getElementById('resume-status');
-        const zoomIn = document.getElementById('resume-zoom-in');
-        const zoomOut = document.getElementById('resume-zoom-out');
-
-        if (resumePages && resumeStatus) {
-            const resumeUrl = 'assets/resume.pdf';
-            const minZoom = 0.75;
-            const maxZoom = 1.75;
-            const zoomStep = 0.15;
-            let pdfDocument = null;
-            let zoom = 1;
-            let renderToken = 0;
-            let resizeTimer = null;
-            let lastRenderedWidth = 0;
-
-            function setStatus(message) {
-                resumeStatus.textContent = message;
-            }
-
-            function setZoom(nextZoom) {
-                zoom = Math.min(maxZoom, Math.max(minZoom, nextZoom));
-                if (zoomIn) zoomIn.disabled = zoom >= maxZoom;
-                if (zoomOut) zoomOut.disabled = zoom <= minZoom;
-                renderResume();
-            }
-
-            async function renderResume() {
-                if (!pdfDocument) return;
-
-                const token = ++renderToken;
-                const availableWidth = Math.max(260, resumePages.clientWidth - 40);
-                lastRenderedWidth = availableWidth;
-                resumePages.innerHTML = '';
-                setStatus(`Rendering ${pdfDocument.numPages} page${pdfDocument.numPages === 1 ? '' : 's'}...`);
-
-                for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
-                    if (token !== renderToken) return;
-
-                    const page = await pdfDocument.getPage(pageNumber);
-                    const baseViewport = page.getViewport({ scale: 1 });
-                    const viewport = page.getViewport({
-                        scale: (availableWidth / baseViewport.width) * zoom
-                    });
-                    const outputScale = Math.min(window.devicePixelRatio || 1, 2);
-                    const pageElement = document.createElement('div');
-                    const canvasElement = document.createElement('canvas');
-                    const canvasContext = canvasElement.getContext('2d');
-
-                    pageElement.className = 'resume-page';
-                    pageElement.style.width = `${Math.floor(viewport.width)}px`;
-                    pageElement.style.maxWidth = 'none';
-
-                    canvasElement.width = Math.floor(viewport.width * outputScale);
-                    canvasElement.height = Math.floor(viewport.height * outputScale);
-                    canvasElement.style.width = `${Math.floor(viewport.width)}px`;
-                    canvasElement.style.height = `${Math.floor(viewport.height)}px`;
-
-                    pageElement.appendChild(canvasElement);
-                    resumePages.appendChild(pageElement);
-
-                    await page.render({
-                        canvasContext,
-                        viewport,
-                        transform: outputScale !== 1
-                            ? [outputScale, 0, 0, outputScale, 0, 0]
-                            : null
-                    }).promise;
-                }
-
-                if (token === renderToken) {
-                    setStatus(`${pdfDocument.numPages} page${pdfDocument.numPages === 1 ? '' : 's'} - ${Math.round(zoom * 100)}%`);
-                }
-            }
-
-            function queueResizeRender() {
-                if (!pdfDocument) return;
-
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
-                    const availableWidth = Math.max(260, resumePages.clientWidth - 40);
-                    if (Math.abs(availableWidth - lastRenderedWidth) > 8) {
-                        renderResume();
+                        vec3 surface = mix(lit, cloudLit, cloud) * SUN / PI;
+                        // Skylight keeps the twilight side from going flat black
+                        surface += mix(albedo, vec3(0.9), cloud) * SUN * 0.012 * vec3(0.4, 0.6, 1.0) * smoothstep(-0.1, 0.25, ndl);
+                        col += surface * trans;
+                    } else {
+                        // Airglow: a thin green shell near 95 km, seen edge on
+                        float b = dot(ro, rd);
+                        if (b < 0.0) {
+                            float tangent = length(ro - rd * b) - RE;
+                            col += vec3(0.1, 0.45, 0.2) * 0.006 * uNight
+                                * exp(-pow((tangent - 0.0149) / 0.0006, 2.0));
+                        }
                     }
-                }, 150);
+
+                    // Sun disc, dimmed and reddened by any air in front of it
+                    float away = length(cross(rd, uSun));
+                    float px = 2.0 * uTanHalf / uRes.y;
+                    if (!ground && dot(rd, uSun) > 0.0) {
+                        col += trans * SUN * 40.0 * smoothstep(SUN_RADIUS + px, SUN_RADIUS - px, away);
+                    }
+
+                    // Camera glare from whatever part of the sun is visible
+                    vec3 sunSeen = sunlightAt(ro);
+                    float glare = 0.00005 / (away * away + 0.00005) + exp(-away * 6.0) * 0.004;
+                    col += sunSeen * glare * vec3(1.0, 0.93, 0.84) * (dot(rd, uSun) > 0.0 ? 1.0 : 0.0);
+
+                    col = pow(filmic(col * uExposure), vec3(1.0 / 2.2));
+
+                    // Stars sit in screen space; the camera never moves
+                    if (!ground) {
+                        vec2 g = frag / (4.0 * uScale);
+                        vec2 id = floor(g);
+                        if (hash(id) > 0.986) {
+                            vec2 off = vec2(hash(id + 1.7), hash(id + 9.2)) - 0.5;
+                            float r = length(fract(g) - 0.5 - off * 0.5);
+                            float bright = pow(hash(id + 4.1), 4.0) * 0.9 + 0.06;
+                            vec3 tint = mix(vec3(0.76, 0.83, 1.0), vec3(1.0, 0.89, 0.76), hash(id + 2.3));
+                            col += tint * bright * smoothstep(0.34, 0.0, r) * trans.g * (0.06 + 0.94 * uNight);
+                        }
+                    }
+
+                    col += (hash(frag * 0.731 + 0.5) - 0.5) / 255.0;
+                    gl_FragColor = vec4(col, 1.0);
+                }
+            `;
+
+            function compile(type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+                return shader;
             }
 
-            zoomIn?.addEventListener('click', () => setZoom(zoom + zoomStep));
-            zoomOut?.addEventListener('click', () => setZoom(zoom - zoomStep));
-
+            const program = gl.createProgram();
             try {
-                const loadingTask = pdfjsLib.getDocument(resumeUrl);
-                loadingTask.onProgress = ({ loaded, total }) => {
-                    if (total) {
-                        setStatus(`Loading resume ${Math.round((loaded / total) * 100)}%`);
-                    }
-                };
-                pdfDocument = await loadingTask.promise;
-                setZoom(1);
-                new ResizeObserver(queueResizeRender).observe(resumePages);
+                gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex));
+                gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment));
+                gl.linkProgram(program);
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
             } catch (error) {
-                console.error(error);
-                setStatus('Resume preview unavailable');
-                resumePages.innerHTML = '<div class="resume-loading"><a href="assets/resume.pdf" target="_blank">Open the resume PDF</a></div>';
+                console.warn(error);
+                canvas.hidden = true;
+                return;
             }
-        }
-    </script>
+            gl.useProgram(program);
 
-    <script>
-        // Scroll-triggered animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+            // One oversized triangle covers the viewport
+            gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+            const aPos = gl.getAttribLocation(program, 'aPos');
+            gl.enableVertexAttribArray(aPos);
+            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-        let projectCardsRevealed = false;
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
+            const uniform = (name) => gl.getUniformLocation(program, name);
+            const u = {
+                res: uniform('uRes'), scale: uniform('uScale'),
+                camPos: uniform('uCamPos'), camRight: uniform('uCamRight'), camUp: uniform('uCamUp'),
+                camForward: uniform('uCamForward'), tanHalf: uniform('uTanHalf'),
+                sun: uniform('uSun'), exposure: uniform('uExposure'), night: uniform('uNight'),
+                earth: uniform('uEarth'), textures: uniform('uTextures'),
+            };
 
-                if (entry.target.closest('.projects-grid') && !projectCardsRevealed) {
-                    projectCardsRevealed = true;
-                    document.querySelectorAll('.projects-grid .project-card.fade-in').forEach((card) => {
-                        card.classList.add('visible');
-                        observer.unobserve(card);
-                    });
-                    return;
-                }
+            // Camera: 400 km up, pitched down toward the horizon and rolled
+            // a little so the limb falls away to the right
+            const DEG = Math.PI / 180;
+            const ALTITUDE = 400 / 6360;
+            const DIP = Math.acos(1 / (1 + ALTITUDE));
+            const PITCH = -12 * DEG;
+            const ROLL = -6 * DEG;
+            const TAN_HALF = Math.tan(20 * DEG);
+            const forward = [0, Math.sin(PITCH), -Math.cos(PITCH)];
+            const level = [0, Math.cos(PITCH), Math.sin(PITCH)];
+            const right = [Math.cos(ROLL), level[1] * Math.sin(ROLL), level[2] * Math.sin(ROLL)];
+            const up = [-Math.sin(ROLL), level[1] * Math.cos(ROLL), level[2] * Math.cos(ROLL)];
 
-                entry.target.classList.add('visible');
-                observer.unobserve(entry.target);
-            });
-        }, observerOptions);
+            const smoothstep = (a, b, x) => {
+                const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
+                return t * t * (3 - 2 * t);
+            };
 
-        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+            // The sun climbs from 7° below the horizon to 20° above it,
+            // rising in the right third of any screen shape. The curve lingers
+            // before sunrise so the first scroll still shows the dawn glow
+            // building. Its path leans right, more on narrow screens, so on a
+            // phone it leaves the frame before it reaches the text.
+            function setSun(progress) {
+                const aspect = canvas.width / canvas.height;
+                const clear = (-7 + 27 * Math.pow(progress, 1.3)) * DEG;
+                const lean = Math.min(Math.max(0.9 - 0.4 * aspect, 0.25), 0.8);
+                const yaw = Math.atan(0.26 * aspect * 2 * TAN_HALF) + lean * clear;
+                const elevation = clear - DIP;
+                gl.uniform3f(u.sun,
+                    Math.sin(yaw) * Math.cos(elevation),
+                    Math.sin(elevation),
+                    -Math.cos(yaw) * Math.cos(elevation));
+                // Exposure drops once the disc clears the limb, so the stars
+                // fade as they would on a camera metering for the sun, and
+                // keeps dropping as more of the ground comes into daylight
+                const night = 1 - smoothstep(-0.4 * DEG, 2 * DEG, clear);
+                const day = smoothstep(2 * DEG, 20 * DEG, clear);
+                gl.uniform1f(u.night, night);
+                gl.uniform1f(u.exposure, (1.1 + night * 1.4) * (1 - 0.5 * day));
+            }
 
-        // Nav pill appears only after the hero (which carries the same links)
-        // has mostly scrolled out of view
-        const nav = document.querySelector('nav');
-        const hero = document.querySelector('.hero');
-        let heroThreshold = hero.offsetHeight * 0.6;
-        function updateNav() {
-            nav.classList.toggle('visible', window.scrollY > heroThreshold);
-        }
-        window.addEventListener('scroll', updateNav, { passive: true });
-        window.addEventListener('resize', () => {
-            heroThreshold = hero.offsetHeight * 0.6;
-            updateNav();
-        }, { passive: true });
-        updateNav();
+            // Place the camera over the mid-Atlantic heading east, so the
+            // sun rises toward the coast of West Africa. uEarth turns world
+            // directions into the texture's latitude and longitude frame.
+            function earthFrame(lat, lon, heading) {
+                const cl = Math.cos(lat * DEG), sl = Math.sin(lat * DEG);
+                const co = Math.cos(lon * DEG), so = Math.sin(lon * DEG);
+                const ch = Math.cos(heading * DEG), sh = Math.sin(heading * DEG);
+                const nadir = [cl * co, sl, -cl * so];
+                const east = [-so, 0, -co];
+                const north = [-sl * co, cl, sl * so];
+                const ahead = north.map((v, i) => ch * v + sh * east[i]);
+                const side = [
+                    ahead[1] * nadir[2] - ahead[2] * nadir[1],
+                    ahead[2] * nadir[0] - ahead[0] * nadir[2],
+                    ahead[0] * nadir[1] - ahead[1] * nadir[0],
+                ];
+                return new Float32Array([...side, ...nadir, ...ahead.map((v) => -v)]);
+            }
+            gl.uniformMatrix3fv(u.earth, false, earthFrame(22, -40, 95));
+            gl.uniform1f(u.textures, 0);
+
+            const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
+            function loadTexture(unit, name, src) {
+                const texture = gl.createTexture();
+                gl.activeTexture(gl.TEXTURE0 + unit);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                // Keep samplers complete while images load or if a request fails.
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.uniform1i(uniform(name), unit);
+                return new Promise((resolve, reject) => {
+                    const image = new Image();
+                    image.onload = () => {
+                        gl.activeTexture(gl.TEXTURE0 + unit);
+                        gl.bindTexture(gl.TEXTURE_2D, texture);
+                        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+                        gl.generateMipmap(gl.TEXTURE_2D);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                        if (anisotropy) {
+                            const max = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+                            gl.texParameterf(gl.TEXTURE_2D, anisotropy.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, max));
+                        }
+                        resolve();
+                    };
+                    image.onerror = reject;
+                    image.src = src;
+                });
+            }
+
+            // The night side needs no textures, so they load after the first frame
+            function loadEarth() {
+                Promise.all([
+                    loadTexture(0, 'uDay', 'assets/earth-day.jpg'),
+                    loadTexture(1, 'uClouds', 'assets/earth-clouds.jpg'),
+                    loadTexture(2, 'uOcean', 'assets/earth-ocean.jpg'),
+                ]).then(() => {
+                    gl.uniform1f(u.textures, 1);
+                    request();
+                }, (error) => console.warn('Earth textures unavailable.', error));
+            }
+
+            const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const introEnd = 0.22;
+            const introMs = 2600;
+            let introStart = performance.now();
+            let dpr = 1;
+            let frame = 0;
+
+            function resize() {
+                dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+                canvas.width = Math.round(canvas.clientWidth * dpr);
+                canvas.height = Math.round(canvas.clientHeight * dpr);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+
+            function scrollProgress() {
+                const range = launch.offsetHeight - window.innerHeight;
+                if (range <= 0) return 0;
+                return Math.min(Math.max(-launch.getBoundingClientRect().top / range, 0), 1);
+            }
+
+            function introProgress(now) {
+                if (reduced) return 0.55;
+                const t = Math.min((now - introStart) / introMs, 1);
+                return introEnd * (1 - Math.pow(1 - t, 3));
+            }
+
+            function draw(now) {
+                frame = 0;
+                gl.uniform2f(u.res, canvas.width, canvas.height);
+                gl.uniform1f(u.scale, dpr);
+                gl.uniform3f(u.camPos, 0, 1 + ALTITUDE, 0);
+                gl.uniform3fv(u.camRight, right);
+                gl.uniform3fv(u.camUp, up);
+                gl.uniform3fv(u.camForward, forward);
+                gl.uniform1f(u.tanHalf, TAN_HALF);
+                setSun(Math.max(introProgress(now), scrollProgress()));
+                gl.drawArrays(gl.TRIANGLES, 0, 3);
+                if (!reduced && now - introStart < introMs) request();
+            }
+
+            function request() {
+                if (!frame) frame = requestAnimationFrame(draw);
+            }
+
+            resize();
+            request();
+            loadEarth();
+            window.addEventListener('scroll', request, { passive: true });
+            window.addEventListener('resize', () => { resize(); request(); });
+        })();
     </script>
 </body>
 </html>
