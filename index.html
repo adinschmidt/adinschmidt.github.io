@@ -34,15 +34,14 @@
         a:focus-visible { outline: 2px solid var(--air); outline-offset: 4px; border-radius: 2px; }
         ::selection { background: rgba(140, 184, 255, 0.3); }
 
-        /* The hero pins while the sun climbs over the limb */
-        .launch { height: 210vh; }
-
-        .launch-pin {
-            position: sticky;
+        /* The planet stays behind the whole page */
+        .sky {
+            position: fixed;
             top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100%;
             height: 100vh;
-            height: 100svh;
-            overflow: hidden;
             /* Fallback sky when WebGL is unavailable */
             background:
                 radial-gradient(90% 18% at 72% 78%, rgba(255, 170, 90, 0.35), transparent 70%),
@@ -51,12 +50,43 @@
         }
 
         #limb {
-            position: absolute;
-            inset: 0;
             width: 100%;
             height: 100%;
             display: block;
         }
+
+        .launch {
+            min-height: 100vh;
+            min-height: 100svh;
+        }
+
+        /* The content slides up over the planet on a frosted panel as wide
+           as the text column. The frost is one screen tall and sticks to the
+           top, so the blur never covers more than the viewport; a page-tall
+           blurred layer drops its text in Chromium. overflow: clip rounds the
+           frost's corners without breaking the sticky. Darkening the backdrop
+           keeps the dim text readable over the sunlit ground. */
+        .sheet {
+            width: min(1180px, 100% - 48px);
+            margin: 0 auto 48px;
+            border: 1px solid var(--rule);
+            border-radius: 24px;
+            overflow: clip;
+        }
+
+        .sheet::before {
+            content: '';
+            position: sticky;
+            top: 0;
+            display: block;
+            height: 100vh;
+            margin-bottom: -100vh;
+            background: rgba(0, 0, 0, 0.25);
+            -webkit-backdrop-filter: blur(32px) brightness(0.35) saturate(1.5);
+            backdrop-filter: blur(32px) brightness(0.35) saturate(1.5);
+        }
+
+        .sheet > * { position: relative; }
 
         #limb[hidden] { display: none; }
 
@@ -236,149 +266,148 @@
         @media (max-width: 560px) {
             .launch-copy, main, footer { padding-left: 20px; padding-right: 20px; }
             .launch-copy { padding-top: 14vh; }
+            .sheet { width: 100%; margin-bottom: 0; border-width: 1px 0 0; border-radius: 24px 24px 0 0; }
             .roles li { grid-template-columns: 1fr; gap: 6px; }
             .elsewhere .copy { margin-left: 0; width: 100%; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .launch { height: auto; }
         }
     </style>
 </head>
 <body>
+    <div class="sky">
+        <canvas id="limb" aria-hidden="true"></canvas>
+    </div>
+
     <header class="launch">
-        <div class="launch-pin">
-            <canvas id="limb" aria-hidden="true"></canvas>
-            <div class="launch-copy">
-                <h1>Adin Schmidt</h1>
-                <p class="lede">
-                    Software engineer in Waterloo, Ontario. I build backend services,
-                    AI infrastructure, and developer tools.
-                </p>
-                <nav class="launch-links" aria-label="Sections">
-                    <a href="#projects">Projects</a>
-                    <a href="#experience">Experience</a>
-                    <a href="assets/resume.pdf">Résumé</a>
-                    <a href="https://github.com/adinschmidt" rel="noopener">GitHub</a>
-                </nav>
-            </div>
+        <div class="launch-copy">
+            <h1>Adin Schmidt</h1>
+            <p class="lede">
+                Software engineer in Waterloo, Ontario. I build backend services,
+                AI infrastructure, and developer tools.
+            </p>
+            <nav class="launch-links" aria-label="Sections">
+                <a href="#projects">Projects</a>
+                <a href="#experience">Experience</a>
+                <a href="assets/resume.pdf">Résumé</a>
+                <a href="https://github.com/adinschmidt" rel="noopener">GitHub</a>
+            </nav>
         </div>
     </header>
 
-    <main>
-        <section id="projects">
-            <h2>Projects</h2>
-            <ul class="projects">
-                <li>
-                    <h3><a href="https://github.com/CivicTechWR/affordable-housing-portal" rel="noopener">Affordable Housing Portal</a></h3>
-                    <span class="stack">TypeScript, Next.js, PostgreSQL</span>
-                    <p>One place for people in Waterloo Region to find and apply for affordable housing, with a partner portal for property managers. Built on Bloom Housing with Civic Tech Waterloo Region.</p>
-                </li>
-                <li>
-                    <h3><a href="https://adinschmidt.com/AI-translator/" rel="noopener">AI Translator</a></h3>
-                    <span class="stack">Browser extension, Manifest V3</span>
-                    <p>Translates selected text or whole pages with the model provider you choose. Custom base URLs and prompts. Published for Chrome and Firefox.</p>
-                </li>
-                <li>
-                    <h3><a href="https://github.com/adinschmidt/mcps" rel="noopener">MCP Servers</a></h3>
-                    <span class="stack">TypeScript, Bun</span>
-                    <p>Model Context Protocol servers for Fastmail mail, calendar, and contacts, and for all 27 Splitwise API operations.</p>
-                </li>
-                <li>
-                    <h3><a href="https://github.com/adinschmidt/spc-converter" rel="noopener">SPC Converter</a></h3>
-                    <span class="stack">Rust CLI</span>
-                    <p>Turns proprietary .spc spectroscopy files into JSON and CSV, with wavelength or Raman shift axes and optional PNG plots.</p>
-                </li>
-                <li>
-                    <h3><a href="https://github.com/adinschmidt/autorun" rel="noopener">Autorun</a></h3>
-                    <span class="stack">Go</span>
-                    <p>A browser UI for launchd and systemd services. Ships as a single static binary.</p>
-                </li>
-                <li>
-                    <h3><a href="https://github.com/adinschmidt/safe-recall" rel="noopener">SafeRecall</a></h3>
-                    <span class="stack">Rust CLI</span>
-                    <p>Runs OCR over your photos and lets you search the text. Built-in OCR, a local SQLite index, and one static binary.</p>
-                </li>
-            </ul>
-        </section>
+    <div class="sheet">
+        <main>
+            <section id="projects">
+                <h2>Projects</h2>
+                <ul class="projects">
+                    <li>
+                        <h3><a href="https://github.com/CivicTechWR/affordable-housing-portal" rel="noopener">Affordable Housing Portal</a></h3>
+                        <span class="stack">TypeScript, Next.js, PostgreSQL</span>
+                        <p>One place for people in Waterloo Region to find and apply for affordable housing, with a partner portal for property managers. Built on Bloom Housing with Civic Tech Waterloo Region.</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://adinschmidt.com/AI-translator/" rel="noopener">AI Translator</a></h3>
+                        <span class="stack">Browser extension, Manifest V3</span>
+                        <p>Translates selected text or whole pages with the model provider you choose. Custom base URLs and prompts. Published for Chrome and Firefox.</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://github.com/adinschmidt/mcps" rel="noopener">MCP Servers</a></h3>
+                        <span class="stack">TypeScript, Bun</span>
+                        <p>Model Context Protocol servers for Fastmail mail, calendar, and contacts, and for all 27 Splitwise API operations.</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://github.com/adinschmidt/spc-converter" rel="noopener">SPC Converter</a></h3>
+                        <span class="stack">Rust CLI</span>
+                        <p>Turns proprietary .spc spectroscopy files into JSON and CSV, with wavelength or Raman shift axes and optional PNG plots.</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://github.com/adinschmidt/autorun" rel="noopener">Autorun</a></h3>
+                        <span class="stack">Go</span>
+                        <p>A browser UI for launchd and systemd services. Ships as a single static binary.</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://github.com/adinschmidt/safe-recall" rel="noopener">SafeRecall</a></h3>
+                        <span class="stack">Rust CLI</span>
+                        <p>Runs OCR over your photos and lets you search the text. Built-in OCR, a local SQLite index, and one static binary.</p>
+                    </li>
+                </ul>
+            </section>
 
-        <section id="experience">
-            <h2>Experience</h2>
-            <ol class="roles">
-                <li>
-                    <time>2025–now</time>
-                    <div>
-                        <h3>Civic Tech Waterloo Region</h3>
-                        <div class="role">Volunteer technical lead</div>
-                        <p>Leading development of the Affordable Housing Portal and mentoring the students and junior developers who build it.</p>
-                    </div>
-                </li>
-                <li>
-                    <time>2025–2026</time>
-                    <div>
-                        <h3>Hypotenuse Labs</h3>
-                        <div class="role">Software developer, contract</div>
-                        <p>Built a Discord agent with persistent memory, sandboxed execution, and routing across model providers. Wrote the OpenAI-compatible LLM proxy that carried over $100k of token usage, with quotas, priority queues, and repair for inconsistent provider APIs.</p>
-                    </div>
-                </li>
-                <li>
-                    <time>2021–2024</time>
-                    <div>
-                        <h3>Sandvine</h3>
-                        <div class="role">Backend software developer</div>
-                        <p>Lead developer and product owner of the Alert Engine, which runs statistical and ML classifiers over terabytes of network telemetry every five minutes. Ran sprints for a team of eight and shipped three major releases on time.</p>
-                    </div>
-                </li>
-                <li>
-                    <time>2020</time>
-                    <div>
-                        <h3>Tesla</h3>
-                        <div class="role">Embedded software engineer, co-op</div>
-                        <p>Supercharger team. Embedded C and CAN definitions for messages between vehicles and charger components.</p>
-                    </div>
-                </li>
-                <li>
-                    <time>2019</time>
-                    <div>
-                        <h3>Inscopix</h3>
-                        <div class="role">Software engineer, co-op</div>
-                        <p>Sole developer of a 3D cell detection workflow for neuroimaging video, shown at Society for Neuroscience 2019.</p>
-                    </div>
-                </li>
-                <li>
-                    <time>2017–2019</time>
-                    <div>
-                        <h3>Dejero, McAfee, SAP</h3>
-                        <div class="role">Co-op terms</div>
-                        <p>Multithreaded DNS in C++ for the Dejero GateWay, plus test automation and QA tooling.</p>
-                    </div>
-                </li>
-                <li>
-                    <time>2015–2020</time>
-                    <div>
-                        <h3>University of Waterloo</h3>
-                        <div class="role">Bachelor of Computer Science, Honours Co-op</div>
-                    </div>
-                </li>
-            </ol>
-        </section>
-    </main>
+            <section id="experience">
+                <h2>Experience</h2>
+                <ol class="roles">
+                    <li>
+                        <time>2025–now</time>
+                        <div>
+                            <h3>Civic Tech Waterloo Region</h3>
+                            <div class="role">Volunteer technical lead</div>
+                            <p>Leading development of the Affordable Housing Portal and mentoring the students and junior developers who build it.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <time>2025–2026</time>
+                        <div>
+                            <h3>Hypotenuse Labs</h3>
+                            <div class="role">Software developer, contract</div>
+                            <p>Built a Discord agent with persistent memory, sandboxed execution, and routing across model providers. Wrote the OpenAI-compatible LLM proxy that carried over $100k of token usage, with quotas, priority queues, and repair for inconsistent provider APIs.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <time>2021–2024</time>
+                        <div>
+                            <h3>Sandvine</h3>
+                            <div class="role">Backend software developer</div>
+                            <p>Lead developer and product owner of the Alert Engine, which runs statistical and ML classifiers over terabytes of network telemetry every five minutes. Ran sprints for a team of eight and shipped three major releases on time.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <time>2020</time>
+                        <div>
+                            <h3>Tesla</h3>
+                            <div class="role">Embedded software engineer, co-op</div>
+                            <p>Supercharger team. Embedded C and CAN definitions for messages between vehicles and charger components.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <time>2019</time>
+                        <div>
+                            <h3>Inscopix</h3>
+                            <div class="role">Software engineer, co-op</div>
+                            <p>Sole developer of a 3D cell detection workflow for neuroimaging video, shown at Society for Neuroscience 2019.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <time>2017–2019</time>
+                        <div>
+                            <h3>Dejero, McAfee, SAP</h3>
+                            <div class="role">Co-op terms</div>
+                            <p>Multithreaded DNS in C++ for the Dejero GateWay, plus test automation and QA tooling.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <time>2015–2020</time>
+                        <div>
+                            <h3>University of Waterloo</h3>
+                            <div class="role">Bachelor of Computer Science, Honours Co-op</div>
+                        </div>
+                    </li>
+                </ol>
+            </section>
+        </main>
 
-    <footer>
-        <a class="mail" href="mailto:me@adinschmidt.com">me@adinschmidt.com</a>
-        <div class="elsewhere">
-            <a href="https://github.com/adinschmidt" rel="noopener">GitHub</a>
-            <a href="https://www.linkedin.com/in/adinschmidt" rel="noopener">LinkedIn</a>
-            <a href="assets/resume.pdf">Résumé (PDF)</a>
-            <span class="copy">© 2026 Adin Schmidt</span>
-        </div>
-        <p class="credit">Earth textures by <a href="https://www.solarsystemscope.com/textures/" rel="noopener">Solar System Scope</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>.</p>
-    </footer>
+        <footer>
+            <a class="mail" href="mailto:me@adinschmidt.com">me@adinschmidt.com</a>
+            <div class="elsewhere">
+                <a href="https://github.com/adinschmidt" rel="noopener">GitHub</a>
+                <a href="https://www.linkedin.com/in/adinschmidt" rel="noopener">LinkedIn</a>
+                <a href="assets/resume.pdf">Résumé (PDF)</a>
+                <span class="copy">© 2026 Adin Schmidt</span>
+            </div>
+            <p class="credit">Earth textures by <a href="https://www.solarsystemscope.com/textures/" rel="noopener">Solar System Scope</a>, licensed <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>.</p>
+        </footer>
+    </div>
 
     <script>
         (function () {
             const canvas = document.getElementById('limb');
-            const launch = document.querySelector('.launch');
             const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
             if (!gl) { canvas.hidden = true; return; }
 
@@ -409,12 +438,15 @@
                 uniform mat3 uSkyFrame;
                 uniform float uSkyTurn;
                 uniform float uExposure;
-                uniform float uNight;
+                uniform float uStars;
                 uniform mat3 uEarth;
                 uniform sampler2D uDay;
                 uniform sampler2D uClouds;
                 uniform sampler2D uOcean;
+                uniform sampler2D uLights;
                 uniform float uTextures;
+                uniform vec4 uCrop;
+                uniform float uDark;
 
                 const float PI = 3.14159265;
                 const float RE = 1.0;
@@ -431,6 +463,9 @@
                 const float SUN_RADIUS = 0.008;
                 const float CLOUD_TOP = 10.0 / 6360.0;
                 const int STEPS = 16;
+                // Geomagnetic north pole (80.65°N, 72.68°W) in the frame uEarth
+                // maps into
+                const vec3 MAG_NORTH = vec3(0.04837, 0.98671, 0.15510);
                 const int LIGHT_STEPS = 8;
 
                 float hash(vec2 p) {
@@ -506,9 +541,11 @@
                     vec3 n = normalize(q);
                     vec3 geo = uEarth * n;
                     vec2 uv = vec2(atan(-geo.z, geo.x) / (2.0 * PI) + 0.5, acos(clamp(geo.y, -1.0, 1.0)) / PI);
+                    uv = (uv - uCrop.xy) / uCrop.zw;
                     vec3 dayTex = texture2D(uDay, uv).rgb;
                     float cloudTex = texture2D(uClouds, uv).r;
                     float oceanTex = texture2D(uOcean, uv).r;
+                    vec3 lightsTex = texture2D(uLights, uv).rgb;
 
                     vec3 col = vec3(0.0);
                     vec3 trans = vec3(1.0);
@@ -570,14 +607,34 @@
                         vec3 surface = mix(lit, cloudLit, cloud) * SUN / PI;
                         // Skylight keeps the twilight side from going flat black
                         surface += mix(albedo, vec3(0.9), cloud) * SUN * 0.012 * vec3(0.4, 0.6, 1.0) * smoothstep(-0.1, 0.25, ndl);
+                        // City lights come on as the sun sets, dimmed where
+                        // cloud covers them
+                        surface += pow(lightsTex, vec3(2.2)) * 1.5 * uTextures * (1.0 - cloud)
+                            * (1.0 - smoothstep(-0.1, 0.1, ndl));
                         col += surface * trans;
                     } else {
                         // Airglow: a thin green shell near 95 km, seen edge on
                         float b = dot(ro, rd);
                         if (b < 0.0) {
-                            float tangent = length(ro - rd * b) - RE;
-                            col += vec3(0.1, 0.45, 0.2) * 0.006 * uNight
+                            vec3 tangentPoint = ro - rd * b;
+                            float tangent = length(tangentPoint) - RE;
+                            col += vec3(0.1, 0.45, 0.2) * 0.006 * uStars
                                 * exp(-pow((tangent - 0.0149) / 0.0006, 2.0));
+
+                            // Aurora from a strong storm, like May 2024's, which
+                            // pushed the northern oval down to about 48°
+                            // magnetic latitude. Green oxygen light starts near
+                            // 100 km and turns red above 200 km. From here the
+                            // oval only reaches the north (left) end of the
+                            // limb, and only shows once the view is dark.
+                            vec3 g = uEarth * normalize(tangentPoint);
+                            float oval = exp(-pow((asin(dot(g, MAG_NORTH)) - 0.84) / 0.09, 2.0));
+                            float km = tangent * 6360.0;
+                            vec3 aurora = vec3(0.15, 1.0, 0.4) * smoothstep(90.0, 110.0, km) * exp(-max(km - 110.0, 0.0) / 45.0)
+                                + vec3(1.0, 0.1, 0.25) * 0.2 * exp(-pow((km - 240.0) / 70.0, 2.0));
+                            // Curtains along the oval
+                            float curtains = 0.7 + 0.3 * sin(atan(-g.z, g.x) * 80.0);
+                            col += aurora * oval * curtains * 0.02 * uDark;
                         }
                     }
 
@@ -604,14 +661,14 @@
                         float cell = 8.0 * uScale * uTanHalf / uRes.y;
                         float lat = asin(clamp(s.z, -1.0, 1.0));
                         float count = floor(2.0 * PI * cos((floor(lat / cell) + 0.5) * cell) / cell);
-                        vec2 g = vec2((atan(s.y, s.x) - uSkyTurn) / (2.0 * PI) * count, lat / cell);
+                        vec2 g = vec2(fract((atan(s.y, s.x) - uSkyTurn) / (2.0 * PI)) * count, lat / cell);
                         vec2 id = floor(g);
-                        if (hash(id) > 0.986) {
+                        if (hash(id) > 0.975) {
                             vec2 off = vec2(hash(id + 1.7), hash(id + 9.2)) - 0.5;
                             float r = length(fract(g) - 0.5 - off * 0.5);
                             float bright = pow(hash(id + 4.1), 4.0) * 0.9 + 0.06;
                             vec3 tint = mix(vec3(0.76, 0.83, 1.0), vec3(1.0, 0.89, 0.76), hash(id + 2.3));
-                            col += tint * bright * smoothstep(0.34, 0.0, r) * trans * (0.06 + 0.94 * uNight);
+                            col += tint * bright * smoothstep(0.34, 0.0, r) * trans * uStars;
                         }
                     }
 
@@ -654,8 +711,8 @@
                 camPos: uniform('uCamPos'), camRight: uniform('uCamRight'), camUp: uniform('uCamUp'),
                 camForward: uniform('uCamForward'), tanHalf: uniform('uTanHalf'),
                 sun: uniform('uSun'), skyFrame: uniform('uSkyFrame'), skyTurn: uniform('uSkyTurn'),
-                exposure: uniform('uExposure'), night: uniform('uNight'),
-                earth: uniform('uEarth'), textures: uniform('uTextures'),
+                exposure: uniform('uExposure'), stars: uniform('uStars'),
+                earth: uniform('uEarth'), textures: uniform('uTextures'), crop: uniform('uCrop'), dark: uniform('uDark'),
             };
 
             // Camera: 400 km up, pitched down toward the horizon and rolled
@@ -671,18 +728,34 @@
             const right = [Math.cos(ROLL), level[1] * Math.sin(ROLL), level[2] * Math.sin(ROLL)];
             const up = [-Math.sin(ROLL), level[1] * Math.cos(ROLL), level[2] * Math.cos(ROLL)];
 
+            const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
             const smoothstep = (a, b, x) => {
                 const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
                 return t * t * (3 - 2 * t);
             };
 
+            // The sun's elevation seen from the ground where a ray from the
+            // camera lands, given the ray's bearing and angle below level
+            function sunHeight(sun, bearing, depression) {
+                const r = 1 + ALTITUDE;
+                const d = [
+                    Math.sin(bearing) * Math.cos(depression),
+                    -Math.sin(depression),
+                    -Math.cos(bearing) * Math.cos(depression),
+                ];
+                const t = r * Math.sin(depression) - Math.sqrt(Math.max(1 - r * r * Math.cos(depression) ** 2, 0));
+                const n = [d[0] * t, r + d[1] * t, d[2] * t];
+                return Math.asin(Math.min(dot(n, sun), 1));
+            }
+
             // The sky turns as one piece about a fixed axis, carrying the sun
-            // from 7° below the horizon to 20° above it. The sun crosses the
-            // limb in the right third of any screen shape. The curve lingers
-            // before sunrise so the first scroll still shows the dawn glow
-            // building. The path tilts right, more on narrow screens, so on a
-            // phone the sun leaves the frame before it reaches the text.
-            function setSky(progress) {
+            // all the way round: up over the limb, overhead, down behind the
+            // camera, and under the planet. turn is the angle past the point
+            // where the sun meets the limb, which is in the right third of
+            // any screen shape. The path tilts right, more on narrow screens,
+            // so on a phone the sun leaves the frame before it reaches the
+            // text.
+            function setSky(turn) {
                 const aspect = canvas.width / canvas.height;
                 const yaw = Math.atan(0.26 * aspect * 2 * TAN_HALF);
                 const tilt = Math.atan(Math.min(Math.max(0.9 - 0.4 * aspect, 0.25), 0.8));
@@ -698,26 +771,48 @@
                 const axis = side.map((v, i) => ct * v - st * climb[i]);
                 gl.uniformMatrix3fv(u.skyFrame, false, new Float32Array([...rise, ...heading, ...axis]));
 
-                // Dividing by cos(tilt) keeps the climb, not the path length,
-                // at 27°
-                const turn = (-7 + 27 * Math.pow(progress, 1.3)) * DEG / ct;
                 const sun = rise.map((v, i) => Math.cos(turn) * v + Math.sin(turn) * heading[i]);
                 gl.uniform1f(u.skyTurn, turn);
                 gl.uniform3fv(u.sun, sun);
 
-                // Exposure drops once the disc clears the limb, so the stars
-                // fade as they would on a camera metering for the sun, and
-                // keeps dropping as more of the ground comes into daylight
+                // The camera meters off the ground in frame nearest the sun:
+                // the limb and the bottom edge, at the sun's bearing clamped
+                // to the frame. While the sun rises ahead, the limb reading is
+                // exactly its height above the limb. Once it passes behind
+                // us, the view ahead falls into night before the sun sets,
+                // and the stars come back with it.
+                const reach = Math.atan(TAN_HALF * aspect);
+                const bearing = Math.min(Math.max(Math.atan2(sun[0], -sun[2]), -reach), reach);
+                const lit = Math.max(
+                    sunHeight(sun, bearing, DIP),
+                    sunHeight(sun, bearing, Math.atan(TAN_HALF) - PITCH));
+                // Exposure follows the light in frame, but over a narrow range,
+                // like an HDR camera: it drops once the sun lights the frame
+                // and a little more as the ground comes into daylight
+                const dark = 1 - smoothstep(-0.4 * DEG, 2 * DEG, lit);
+                const day = smoothstep(2 * DEG, 20 * DEG, lit);
+                gl.uniform1f(u.exposure, (1.2 + dark * 0.8) * (1 - 0.4 * day));
+                gl.uniform1f(u.dark, dark);
+
+                // The stars only give way while the sun itself is in frame
+                // and clear of the air. They fade back as it slides out past
+                // the edge of the screen (across and above are its distance
+                // from the centre, in half screen heights).
                 const clear = Math.asin(sun[1]) + DIP;
-                const night = 1 - smoothstep(-0.4 * DEG, 2 * DEG, clear);
-                const day = smoothstep(2 * DEG, 20 * DEG, clear);
-                gl.uniform1f(u.night, night);
-                gl.uniform1f(u.exposure, (1.1 + night * 1.4) * (1 - 0.5 * day));
+                const depth = dot(sun, forward);
+                const across = Math.abs(dot(sun, right) / (depth * TAN_HALF));
+                const above = Math.abs(dot(sun, up) / (depth * TAN_HALF));
+                const inFrame = depth > 0.05
+                    ? smoothstep(aspect + 0.25, aspect - 0.05, across) * smoothstep(1.25, 0.95, above)
+                    : 0;
+                gl.uniform1f(u.stars, 1 - smoothstep(-0.4 * DEG, 2 * DEG, clear) * inFrame);
             }
 
-            // Place the camera over the mid-Atlantic heading east, so the
-            // sun rises toward the coast of West Africa. uEarth turns world
-            // directions into the texture's latitude and longitude frame.
+            // Place the camera over the Atlantic west of the Canaries,
+            // heading east, so the sun rises over open water toward Morocco
+            // and the coastal cities show on the night side. uEarth turns
+            // world directions into the texture's latitude and longitude
+            // frame.
             function earthFrame(lat, lon, heading) {
                 const cl = Math.cos(lat * DEG), sl = Math.sin(lat * DEG);
                 const co = Math.cos(lon * DEG), so = Math.sin(lon * DEG);
@@ -733,7 +828,12 @@
                 ];
                 return new Float32Array([...side, ...nadir, ...ahead.map((v) => -v)]);
             }
-            gl.uniformMatrix3fv(u.earth, false, earthFrame(22, -40, 95));
+            gl.uniformMatrix3fv(u.earth, false, earthFrame(31, -22, 85));
+            // The textures only cover the ground this camera can see, cut at
+            // full resolution from Solar System Scope's 8K maps: pixels
+            // x 3677-4189, y 856-1880, which is 18.4°W to 4.1°E and 52.4°N to
+            // 7.4°N. Moving the camera means cutting them again.
+            gl.uniform4f(u.crop, 3677 / 8192, 856 / 4096, 512 / 8192, 1024 / 4096);
             gl.uniform1f(u.textures, 0);
 
             const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic');
@@ -753,7 +853,7 @@
                         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
                         gl.generateMipmap(gl.TEXTURE_2D);
                         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+                        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                         if (anisotropy) {
                             const max = gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
@@ -772,16 +872,24 @@
                     loadTexture(0, 'uDay', 'assets/earth-day.jpg'),
                     loadTexture(1, 'uClouds', 'assets/earth-clouds.jpg'),
                     loadTexture(2, 'uOcean', 'assets/earth-ocean.jpg'),
+                    loadTexture(3, 'uLights', 'assets/earth-night.jpg'),
                 ]).then(() => {
                     gl.uniform1f(u.textures, 1);
                     request();
                 }, (error) => console.warn('Earth textures unavailable.', error));
             }
 
+            // One day lasts about eight and a half minutes. The page opens in
+            // the dark about seven seconds before sunrise. Reduced motion holds
+            // a still frame just after sunrise instead. phase runs 0 to 1
+            // through the day, starting at DAWN.
             const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const introEnd = 0.22;
-            const introMs = 2600;
-            let introStart = performance.now();
+            const DAY_MS = 514000;
+            const DAWN = -5 * DEG;
+            let phase0 = reduced ? (6 * DEG - DAWN) / (2 * Math.PI) : 0;
+            let since = performance.now();
+            const phaseAt = (now) => reduced ? phase0 : (phase0 + (now - since) / DAY_MS) % 1;
+            let last = -Infinity;
             let dpr = 1;
             let frame = 0;
 
@@ -792,20 +900,14 @@
                 gl.viewport(0, 0, canvas.width, canvas.height);
             }
 
-            function scrollProgress() {
-                const range = launch.offsetHeight - window.innerHeight;
-                if (range <= 0) return 0;
-                return Math.min(Math.max(-launch.getBoundingClientRect().top / range, 0), 1);
-            }
-
-            function introProgress(now) {
-                if (reduced) return 0.55;
-                const t = Math.min((now - introStart) / introMs, 1);
-                return introEnd * (1 - Math.pow(1 - t, 3));
-            }
-
             function draw(now) {
                 frame = 0;
+                if (!reduced) {
+                    request();
+                    // Cap at 60 fps so 120 Hz screens don't double the cost
+                    if (now - last < 1000 / 61) return;
+                }
+                last = now;
                 gl.uniform2f(u.res, canvas.width, canvas.height);
                 gl.uniform1f(u.scale, dpr);
                 gl.uniform3f(u.camPos, 0, 1 + ALTITUDE, 0);
@@ -813,9 +915,41 @@
                 gl.uniform3fv(u.camUp, up);
                 gl.uniform3fv(u.camForward, forward);
                 gl.uniform1f(u.tanHalf, TAN_HALF);
-                setSky(Math.max(introProgress(now), scrollProgress()));
+                const phase = phaseAt(now);
+                setSky(DAWN + 2 * Math.PI * phase);
                 gl.drawArrays(gl.TRIANGLES, 0, 3);
-                if (!reduced && now - introStart < introMs) request();
+                if (scrub) scrub.show(phase);
+            }
+
+            // Dev server only: a slider to scrub through the day. Dragging
+            // sets the phase and the day carries on from there.
+            let scrub = null;
+            if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+                const box = document.createElement('label');
+                box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:10;display:flex;gap:10px;align-items:center;'
+                    + 'padding:8px 12px;border-radius:10px;background:rgba(0,0,0,0.6);font-size:13px;color:var(--dim)';
+                const input = Object.assign(document.createElement('input'), { type: 'range', min: 0, max: 1, step: 0.001 });
+                input.style.width = '220px';
+                const readout = document.createElement('span');
+                readout.style.minWidth = '3.5em';
+                box.append('Day', input, readout);
+                document.body.append(box);
+                let held = false;
+                input.addEventListener('pointerdown', () => { held = true; });
+                window.addEventListener('pointerup', () => { held = false; });
+                input.addEventListener('input', () => {
+                    phase0 = +input.value;
+                    since = performance.now();
+                    last = -Infinity;
+                    request();
+                });
+                // Degrees the sky has turned since the sun met the limb
+                scrub = {
+                    show(phase) {
+                        if (!held) input.value = phase;
+                        readout.textContent = `${Math.round(phase * 360 + DAWN / DEG)}°`;
+                    },
+                };
             }
 
             function request() {
@@ -825,8 +959,7 @@
             resize();
             request();
             loadEarth();
-            window.addEventListener('scroll', request, { passive: true });
-            window.addEventListener('resize', () => { resize(); request(); });
+            window.addEventListener('resize', () => { resize(); last = -Infinity; request(); });
         })();
     </script>
 </body>
