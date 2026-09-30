@@ -21,11 +21,11 @@
         capture_exceptions: false,
         respect_dnt: true,
         loaded(instance) {
-            instance.register({ website_design: 'space', analytics_test: isTest });
+            instance.register({ website_design: 'orbit', analytics_test: isTest });
         },
     });
 
-    // Delegation also covers the PDF viewer's dynamically inserted fallback link.
+    // One delegated listener covers every link on the page.
     document.addEventListener('click', (event) => {
         const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
         if (!link) return;
