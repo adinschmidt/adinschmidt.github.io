@@ -189,33 +189,43 @@
 
         .roles li {
             display: grid;
-            grid-template-columns: 8.5em 1fr;
+            grid-template-columns: 8.5em minmax(0, 1fr) minmax(0, 1.4fr);
             gap: 24px;
-            padding: 26px 0;
+            align-items: baseline;
+            padding: 14px 0;
             border-top: 1px solid var(--rule);
         }
 
         .roles li:first-child { border-top: 0; padding-top: 0; }
 
-        .roles time {
-            color: var(--faint);
-            font-size: 15px;
-            padding-top: 3px;
-        }
+        .roles time { color: var(--faint); font-size: 15px; }
 
-        .roles h3 {
-            font-size: 19px;
+        .roles .org {
+            font-size: 17px;
             font-weight: 500;
-            letter-spacing: -0.015em;
+            letter-spacing: -0.01em;
         }
 
         .roles .role { color: var(--dim); font-size: 15px; }
 
-        .roles p {
-            margin-top: 10px;
-            color: var(--dim);
+        .earlier {
+            margin-top: 24px;
             max-width: 38em;
+            color: var(--dim);
+            font-size: 15px;
         }
+
+        .resume {
+            display: inline-block;
+            margin-top: 20px;
+            font-size: 15px;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(232, 235, 241, 0.25);
+            padding-bottom: 2px;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .resume:hover { color: var(--air); border-color: var(--air); }
 
         footer {
             max-width: 1180px;
@@ -267,7 +277,7 @@
             .launch-copy, main, footer { padding-left: 20px; padding-right: 20px; }
             .launch-copy { padding-top: 14vh; }
             .sheet { width: 100%; margin-bottom: 0; border-width: 1px 0 0; border-radius: 24px 24px 0 0; }
-            .roles li { grid-template-columns: 1fr; gap: 6px; }
+            .roles li { grid-template-columns: 1fr; gap: 2px; }
             .elsewhere .copy { margin-left: 0; width: 100%; }
         }
     </style>
@@ -333,63 +343,16 @@
 
             <section id="experience">
                 <h2>Experience</h2>
-                <ol class="roles">
-                    <li>
-                        <time>2025–now</time>
-                        <div>
-                            <h3>Civic Tech Waterloo Region</h3>
-                            <div class="role">Volunteer technical lead</div>
-                            <p>Leading development of the Affordable Housing Portal and mentoring the students and junior developers who build it.</p>
-                        </div>
-                    </li>
-                    <li>
-                        <time>2025–2026</time>
-                        <div>
-                            <h3>Hypotenuse Labs</h3>
-                            <div class="role">Software developer, contract</div>
-                            <p>Built a Discord agent with persistent memory, sandboxed execution, and routing across model providers. Wrote the OpenAI-compatible LLM proxy that carried over $100k of token usage, with quotas, priority queues, and repair for inconsistent provider APIs.</p>
-                        </div>
-                    </li>
-                    <li>
-                        <time>2021–2024</time>
-                        <div>
-                            <h3>Sandvine</h3>
-                            <div class="role">Backend software developer</div>
-                            <p>Lead developer and product owner of the Alert Engine, which runs statistical and ML classifiers over terabytes of network telemetry every five minutes. Ran sprints for a team of eight and shipped three major releases on time.</p>
-                        </div>
-                    </li>
-                    <li>
-                        <time>2020</time>
-                        <div>
-                            <h3>Tesla</h3>
-                            <div class="role">Embedded software engineer, co-op</div>
-                            <p>Supercharger team. Embedded C and CAN definitions for messages between vehicles and charger components.</p>
-                        </div>
-                    </li>
-                    <li>
-                        <time>2019</time>
-                        <div>
-                            <h3>Inscopix</h3>
-                            <div class="role">Software engineer, co-op</div>
-                            <p>Sole developer of a 3D cell detection workflow for neuroimaging video, shown at Society for Neuroscience 2019.</p>
-                        </div>
-                    </li>
-                    <li>
-                        <time>2017–2019</time>
-                        <div>
-                            <h3>Dejero, McAfee, SAP</h3>
-                            <div class="role">Co-op terms</div>
-                            <p>Multithreaded DNS in C++ for the Dejero GateWay, plus test automation and QA tooling.</p>
-                        </div>
-                    </li>
-                    <li>
-                        <time>2015–2020</time>
-                        <div>
-                            <h3>University of Waterloo</h3>
-                            <div class="role">Bachelor of Computer Science, Honours Co-op</div>
-                        </div>
-                    </li>
-                </ol>
+                <div>
+                    <ol class="roles">
+                        <li><time>2025–now</time><span class="org">Civic Tech Waterloo Region</span><span class="role">Volunteer technical lead</span></li>
+                        <li><time>2025–2026</time><span class="org">Hypotenuse Labs</span><span class="role">Software developer, contract</span></li>
+                        <li><time>2021–2024</time><span class="org">Sandvine</span><span class="role">Backend software developer</span></li>
+                        <li><time>2020</time><span class="org">Tesla</span><span class="role">Embedded software engineer, co-op</span></li>
+                    </ol>
+                    <p class="earlier">Earlier co-op terms at Inscopix, Dejero, McAfee, and SAP. Bachelor of Computer Science, University of Waterloo.</p>
+                    <a class="resume" href="assets/resume.pdf">Full résumé (PDF)</a>
+                </div>
             </section>
         </main>
 
