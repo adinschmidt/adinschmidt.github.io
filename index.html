@@ -553,7 +553,13 @@
                         // at grazing angles where water turns mirror-like
                         vec3 halfway = normalize(uSun - rd);
                         float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(n, -rd), 0.0), 5.0);
-                        lit += vec3(1.0) * pow(max(dot(n, halfway), 0.0), 300.0) * 40.0 * fresnel * ocean * step(0.0, ndl);
+                        // As the sun gets low, waves shadow each other, so the
+                        // glint fades out toward the terminator. This is the
+                        // Smith term for waves as rough as the 300 exponent
+                        // (Beckmann slope 0.081, Walter et al. 2007 fit).
+                        float a = max(ndl, 0.0) / (0.081 * sqrt(max(1.0 - ndl * ndl, 1e-6)));
+                        float shadow = a < 1.6 ? (3.535 * a + 2.181 * a * a) / (1.0 + 2.276 * a + 2.577 * a * a) : 1.0;
+                        lit += vec3(1.0) * pow(max(dot(n, halfway), 0.0), 300.0) * 40.0 * fresnel * shadow * ocean;
                         lit *= sunGround;
 
                         // Cloud tops sit 10 km up, so they catch the sun a
