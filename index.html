@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- The page is already dark. Dark Reader would otherwise paint a body
-         background over the planet, which sits behind the body at z-index -1. -->
+    <!-- The page is already dark, so ask Dark Reader not to restyle it -->
     <meta name="color-scheme" content="dark">
     <meta name="darkreader-lock">
     <title>Adin Schmidt</title>
@@ -40,12 +39,14 @@
         a:focus-visible { outline: 2px solid var(--air); outline-offset: 4px; border-radius: 2px; }
         ::selection { background: rgba(140, 184, 255, 0.3); }
 
-        /* The planet stays behind the whole page */
+        /* The planet stays behind the whole page. It sits above the body
+           rather than at a negative z-index, because dark-mode extensions
+           give html and body their own backgrounds, and body's would then
+           cover it. The page content is positioned so it paints on top. */
         .sky {
             position: fixed;
             top: 0;
             left: 0;
-            z-index: -1;
             width: 100%;
             height: 100vh;
             /* Fallback sky when WebGL is unavailable */
@@ -73,6 +74,7 @@
            frost's corners without breaking the sticky. Darkening the backdrop
            keeps the dim text readable over the sunlit ground. */
         .sheet {
+            position: relative;
             width: min(1180px, 100% - 48px);
             margin: 0 auto 48px;
             border: 1px solid var(--rule);
