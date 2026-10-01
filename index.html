@@ -414,6 +414,7 @@
             const fragment = `
                 precision highp float;
                 uniform vec2 uRes;
+                uniform float uShift;
                 uniform float uScale;
                 uniform vec3 uCamPos;
                 uniform vec3 uCamRight;
@@ -513,7 +514,10 @@
 
                 void main() {
                     vec2 frag = gl_FragCoord.xy;
-                    vec2 p = (frag - 0.5 * uRes) / uRes.y;
+                    // uRes is the view the camera is framed for and uShift is
+                    // how far the canvas runs past its bottom edge, so a taller
+                    // canvas shows more ground instead of moving the planet
+                    vec2 p = (frag - vec2(0.0, uShift) - 0.5 * uRes) / uRes.y;
                     vec3 ro = uCamPos;
                     vec3 rd = normalize(uCamForward + (p.x * uCamRight + p.y * uCamUp) * 2.0 * uTanHalf);
 
@@ -693,7 +697,7 @@
 
             const uniform = (name) => gl.getUniformLocation(program, name);
             const u = {
-                res: uniform('uRes'), scale: uniform('uScale'),
+                res: uniform('uRes'), shift: uniform('uShift'), scale: uniform('uScale'),
                 camPos: uniform('uCamPos'), camRight: uniform('uCamRight'), camUp: uniform('uCamUp'),
                 camForward: uniform('uCamForward'), tanHalf: uniform('uTanHalf'),
                 sun: uniform('uSun'), skyFrame: uniform('uSkyFrame'), skyTurn: uniform('uSkyTurn'),
@@ -742,7 +746,7 @@
             // so on a phone the sun leaves the frame before it reaches the
             // text.
             function setSky(turn) {
-                const aspect = canvas.width / canvas.height;
+                const aspect = canvas.width / viewHeight;
                 const yaw = Math.atan(0.26 * aspect * 2 * TAN_HALF);
                 const tilt = Math.atan(Math.min(Math.max(0.9 - 0.4 * aspect, 0.25), 0.8));
                 const cy = Math.cos(yaw), sy = Math.sin(yaw);
@@ -883,12 +887,25 @@
             let last = -Infinity;
             let dpr = 1;
             let frame = 0;
+            // The camera is framed for viewWidth by viewHeight canvas pixels.
+            // Some phone browsers (Brave on iOS) resize the page as their
+            // toolbars slide away, which changes only the height, by a
+            // toolbar's worth. On touch screens the framing holds through
+            // that, so the planet stays put and the extra height shows more
+            // ground. Anything bigger reframes.
+            const touch = matchMedia('(pointer: coarse)').matches;
+            let viewWidth = 0;
+            let viewHeight = 0;
 
             function resize() {
                 dpr = Math.min(window.devicePixelRatio || 1, 1.5);
                 canvas.width = Math.round(canvas.clientWidth * dpr);
                 canvas.height = Math.round(canvas.clientHeight * dpr);
                 gl.viewport(0, 0, canvas.width, canvas.height);
+                if (!touch || canvas.width !== viewWidth || Math.abs(canvas.height / viewHeight - 1) > 0.25) {
+                    viewWidth = canvas.width;
+                    viewHeight = canvas.height;
+                }
             }
 
             function draw(now) {
@@ -899,7 +916,8 @@
                     if (now - last < 1000 / 61) return;
                 }
                 last = now;
-                gl.uniform2f(u.res, canvas.width, canvas.height);
+                gl.uniform2f(u.res, canvas.width, viewHeight);
+                gl.uniform1f(u.shift, canvas.height - viewHeight);
                 gl.uniform1f(u.scale, dpr);
                 gl.uniform3f(u.camPos, 0, 1 + ALTITUDE, 0);
                 gl.uniform3fv(u.camRight, right);
