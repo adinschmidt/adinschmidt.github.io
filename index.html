@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-darkreader-white-flash-suppressor="active">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- The page is already dark, so ask Dark Reader not to restyle it -->
+    <!-- The page is already dark, so ask Dark Reader not to restyle it. Dark
+         Night, built on an older Dark Reader, ignores the lock. Until its theme
+         starts it paints every element grey unless <html> carries the
+         white-flash-suppressor attribute, and when its background script
+         stalls the theme never starts, so the page sets the attribute itself. -->
     <meta name="color-scheme" content="dark">
     <meta name="darkreader-lock">
     <title>Adin Schmidt</title>
