@@ -740,23 +740,28 @@
                 gl.uniform1f(u.skyTurn, turn);
                 gl.uniform3fv(u.sun, sun);
 
-                // The camera meters off the ground in frame nearest the sun:
-                // the limb and the bottom edge, at the sun's bearing clamped
-                // to the frame. While the sun rises ahead, the limb reading is
-                // exactly its height above the limb. Once it passes behind
-                // us, the view ahead falls into night before the sun sets,
-                // and the stars come back with it.
+                // The camera reads the sun's height over the ground at two
+                // places in frame, at the sun's bearing clamped to the frame:
+                // the limb (far) and the bottom edge (near). While the sun
+                // rises ahead, the far reading is exactly its height above the
+                // limb, and the near ground stays in night for a while longer.
+                // Once it passes behind us, the view ahead falls into night
+                // before the sun sets, and the stars come back with it.
                 const reach = Math.atan(TAN_HALF * aspect);
                 const bearing = Math.min(Math.max(Math.atan2(sun[0], -sun[2]), -reach), reach);
-                const lit = Math.max(
-                    sunHeight(sun, bearing, DIP),
-                    sunHeight(sun, bearing, Math.atan(TAN_HALF) - PITCH));
+                const far = sunHeight(sun, bearing, DIP);
+                const near = sunHeight(sun, bearing, Math.atan(TAN_HALF) - PITCH);
+                const dark = 1 - smoothstep(-0.4 * DEG, 2 * DEG, Math.max(far, near));
                 // Exposure follows the light in frame, but over a narrow range,
-                // like an HDR camera: it drops once the sun lights the frame
-                // and a little more as the ground comes into daylight
-                const dark = 1 - smoothstep(-0.4 * DEG, 2 * DEG, lit);
-                const day = smoothstep(2 * DEG, 20 * DEG, lit);
-                gl.uniform1f(u.exposure, (1.2 + dark * 0.8) * (1 - 0.4 * day));
+                // like an HDR camera. It stays up until the sun lights the
+                // frame, and at sunrise until daylight reaches the near edge,
+                // since most of the ground is still night before then. It
+                // drops a little more as the ground comes into full daylight.
+                // At sunset the near ground is the last lit, so near is the
+                // brighter reading then.
+                const night = Math.max(dark, 1 - smoothstep(-6 * DEG, 4 * DEG, near));
+                const day = smoothstep(2 * DEG, 20 * DEG, near);
+                gl.uniform1f(u.exposure, (1.2 + night * 0.8) * (1 - 0.4 * day));
                 gl.uniform1f(u.dark, dark);
 
                 // The stars only give way while the sun itself is in frame
